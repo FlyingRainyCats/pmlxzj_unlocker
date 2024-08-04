@@ -1,0 +1,29 @@
+name: Build with CMake
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-x86_64.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSTATIC_ZLIB=ON \
+            -B build -S .
+
+      - name: Build
+        run: >
+          cmake \
+            --config Release \
+            --target pmlxzj_unlocker \
+            --build build

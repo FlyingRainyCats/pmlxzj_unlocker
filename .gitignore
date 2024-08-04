@@ -1,4 +1,5 @@
 sample/
+build/
 *.7z
 
 ### C template
