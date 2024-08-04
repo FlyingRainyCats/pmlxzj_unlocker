@@ -7,7 +7,8 @@
 #define PMLXZJ_UNUSED_PARAMETER(x) (void)(x)
 
 // size = 0xB4
-typedef struct __attribute__((__packed__)) {
+#pragma pack(push, 1)
+typedef struct {
   uint32_t color;
   uint32_t wnd_state;
   uint32_t field_8;
@@ -50,7 +51,7 @@ typedef struct __attribute__((__packed__)) {
   uint32_t field_B0;
 } pmlxzj_initial_ui_state_t;
 
-typedef struct __attribute__((__packed__)) {
+typedef struct {
   pmlxzj_initial_ui_state_t initial_ui_state;
   uint32_t mode_1_nonce;
   uint32_t mode_2_nonce;
@@ -63,7 +64,7 @@ typedef struct __attribute__((__packed__)) {
   char magic[0x0C];
 } pmlxzj_footer_t;
 
-typedef struct __attribute__((__packed__)) {
+typedef struct {
   uint32_t field_0;
   uint32_t field_4;
   uint32_t field_8;
@@ -75,6 +76,7 @@ typedef struct __attribute__((__packed__)) {
   uint32_t field_20;
   uint32_t field_24;  // some kind of special flag...
 } pmlxzj_config_14d8_t;
+#pragma pack(pop)
 
 typedef struct {
   FILE* file;

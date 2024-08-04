@@ -9,11 +9,11 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  if (strcmpi(argv[1], "audio-dump") == 0) {
+  if (_strcmpi(argv[1], "audio-dump") == 0) {
     return pmlxzj_cmd_extract_audio(argc, argv);
-  } else if (strcmpi(argv[1], "unlock") == 0) {
+  } else if (_strcmpi(argv[1], "unlock") == 0) {
     return pmlxzj_cmd_unlock_exe(argc, argv);
-  } else if (strcmpi(argv[1], "info") == 0) {
+  } else if (_strcmpi(argv[1], "info") == 0) {
     return pmlxzj_cmd_print_info(argc, argv);
   }
 
