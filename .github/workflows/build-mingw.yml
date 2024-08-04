@@ -13,6 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up MinGW
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
+
       - name: Configure
         run: >
           cmake \
@@ -27,3 +32,8 @@ jobs:
             --config Release \
             --target pmlxzj_unlocker \
             --build build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmlxzj_unlocker
+          path: build/*.exe
