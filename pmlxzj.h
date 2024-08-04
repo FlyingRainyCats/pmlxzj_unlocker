@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define PMLXZJ_UNUSED_PARAMETER(x) (void)(x)
+
 // size = 0xB4
 typedef struct __attribute__((__packed__)) {
   uint32_t color;
@@ -65,13 +67,13 @@ typedef struct __attribute__((__packed__)) {
   uint32_t field_0;
   uint32_t field_4;
   uint32_t field_8;
-  uint32_t field_C;
+  int32_t total_frame_count;
   uint32_t field_10;
   uint32_t field_14;
   uint32_t field_18;
   uint32_t field_1C;
   uint32_t field_20;
-  uint32_t field_24; // some kind of special flag...
+  uint32_t field_24;  // some kind of special flag...
 } pmlxzj_config_14d8_t;
 
 typedef struct {
@@ -91,7 +93,7 @@ typedef struct {
   long first_frame_offset;
   long frame;
 
-  // Audio info
+  // Audio frame
   uint32_t audio_segment_count;
   long audio_start_offset;
 } pmlxzj_state_t;
@@ -106,9 +108,32 @@ typedef enum {
   PMLXZJ_AUDIO_TYPE_UNSUPPORTED = 6,
 } pmlxzj_state_e;
 
+typedef enum {
+  PMLXZJ_ENUM_CONTINUE = 0,
+  PMLXZJ_ENUM_ABORT = 1,
+} pmlxzj_enumerate_state_e;
+
+typedef struct {
+  // might be wrong
+  uint32_t left;
+  uint32_t top;
+  uint32_t right;
+  uint32_t bottom;
+} pmlxzj_rect;
+
+typedef struct {
+  int32_t frame_id;
+  int32_t image_id;
+  pmlxzj_rect cord;  // image position. all zero = full canvas size or missing
+  uint32_t compressed_size;
+  uint32_t decompressed_size;
+} pmlxzj_frame_info_t;
+typedef pmlxzj_enumerate_state_e(pmlxzj_enumerate_callback_t)(pmlxzj_state_t* ctx, pmlxzj_frame_info_t* frame, void* extra_callback_data);
+
 pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src);
 pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx);
 pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx);
-void pmlxzj_try_fix_frame(pmlxzj_state_t* ctx, FILE* f_dst);
+pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, FILE* f_src);
+pmlxzj_enumerate_state_e pmlxzj_enumerate_images(pmlxzj_state_t* ctx, pmlxzj_enumerate_callback_t* callback, void* extra_callback_data);
 
 bool pmlxzj_inflate_audio(pmlxzj_state_t* ctx, FILE* f_audio);

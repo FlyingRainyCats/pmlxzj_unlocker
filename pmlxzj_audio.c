@@ -81,12 +81,18 @@ pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
 
   FILE* f_src = ctx->file;
   fseek(f_src, (long)ctx->footer.offset_data_start, SEEK_SET);
-  int32_t flipped_value = 0;
-  fread(&flipped_value, sizeof(flipped_value), 1, f_src);
-  if (flipped_value >= 0) {
+  int32_t audio_offset = 0;
+  fread(&audio_offset, sizeof(audio_offset), 1, f_src);
+  if (audio_offset == 0) {
+    // no audio
+    ctx->audio_segment_count = 0;
+    ctx->audio_start_offset = 0;
+    return PMLXZJ_OK;
+  }
+  if (audio_offset > 0) {
     return PMLXZJ_AUDIO_OFFSET_UNSUPPORTED;
   }
-  fseek(f_src, -flipped_value, SEEK_SET);
+  fseek(f_src, -audio_offset, SEEK_SET);
   fread(&ctx->audio_segment_count, sizeof(ctx->audio_segment_count), 1, f_src);
   ctx->audio_start_offset = ftell(f_src);
   return PMLXZJ_OK;

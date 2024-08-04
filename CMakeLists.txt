@@ -11,7 +11,15 @@ FetchContent_Declare(zlib
 )
 FetchContent_MakeAvailable(zlib)
 
-add_executable(pmlxzj_unlocker main.c pmlxzj.c pmlxzj_audio.c pmlxzj_frame.c)
+add_executable(pmlxzj_unlocker
+        main.c
+        pmlxzj.c
+        pmlxzj_audio.c
+        pmlxzj_frame.c
+        cmd_info.c
+        cmd_extract_audio.c
+        cmd_unlock_exe.c
+)
 add_executable(experiment str_48c47e.c)
 
 if(STATIC_ZLIB)

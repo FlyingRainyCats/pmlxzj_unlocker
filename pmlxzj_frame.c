@@ -36,7 +36,7 @@ pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx) {
     printf("DEBUG (unused data):\n");
     char buff[seek_unused_data];
     fread(buff, seek_unused_data, 1, f);
-    hexdump(buff, seek_unused_data);
+    pmlxzj_util_hexdump(buff, seek_unused_data);
   }
 #else
   fseek(f, seek_unused_data, SEEK_CUR);
@@ -57,7 +57,7 @@ pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx) {
       char data_hdr[2];
     } test_frame_hdr;
     fread(&test_frame_hdr, sizeof(test_frame_hdr), 1, f);
-    hexdump(&test_frame_hdr, sizeof(test_frame_hdr));
+    pmlxzj_util_hexdump(&test_frame_hdr, sizeof(test_frame_hdr));
     assert(memcmp(test_frame_hdr.data_hdr, "\x78\x9C", 2) == 0 && "invalid zlib data header");
   }
 #endif
@@ -65,42 +65,74 @@ pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx) {
   return PMLXZJ_OK;
 }
 
-void pmlxzj_try_fix_frame(pmlxzj_state_t* ctx, FILE* f_dst) {
-  uint32_t compressed_size = 0;
-  fread(&compressed_size, sizeof(compressed_size), 1, ctx->file);
+pmlxzj_enumerate_state_e pmlxzj_enumerate_images(pmlxzj_state_t* ctx,
+                                                 pmlxzj_enumerate_callback_t* callback,
+                                                 void* extra_callback_data) {
+  pmlxzj_enumerate_state_e enum_state = PMLXZJ_ENUM_CONTINUE;
+  FILE* file = ctx->file;
+  bool field_24_set = ctx->field_14d8.field_24 == 1;
+  fseek(file, ctx->first_frame_offset, SEEK_SET);
+  pmlxzj_frame_info_t frame_info = {0};
 
-  long frame_pos = ftell(ctx->file);
+  // process first frame
+  {
+    fread(&frame_info.compressed_size, sizeof(frame_info.compressed_size), 1, file);
+    long pos = ftell(file);
+    fread(&frame_info.decompressed_size, sizeof(frame_info.decompressed_size), 1, file);
+    fseek(file, -4, SEEK_CUR);
+    enum_state = callback(ctx, &frame_info, extra_callback_data);
+    //    printf("frame %d(id=%d) (len=0x%x, offset=0x%x)\n", frame_info.frame_id, frame_info.image_id, compressed_size,
+    //    (int)ftell(file));
+    frame_info.image_id++;
 
-  uint32_t decompressed_size = 0;
-  fread(&decompressed_size, sizeof(decompressed_size), 1, ctx->file);
-
-  if (compressed_size > 10240) {
-    long key_pos = frame_pos + 4;
-    long cipher_pos = frame_pos + (long)compressed_size / 2;
-
-    char frame_key[20] = {0};
-    char frame_ciphered[20] = {0};
-    fseek(ctx->file, key_pos, SEEK_SET);
-    fread(frame_key, sizeof(frame_key), 1, ctx->file);
-    fseek(ctx->file, cipher_pos, SEEK_SET);
-    fread(frame_ciphered, sizeof(frame_ciphered), 1, ctx->file);
-
-    char* p_nonce_key = &ctx->nonce_buffer[20];
-    for (int i = 0; i < 20; i++, p_nonce_key--) {
-      frame_ciphered[i] = (char)(frame_ciphered[i] ^ frame_key[i] ^ *p_nonce_key);
+    fseek(file, pos + (long)frame_info.compressed_size, SEEK_SET);
+    fread(&frame_info.frame_id, sizeof(frame_info.frame_id), 1, file);
+    assert(frame_info.frame_id == 0);
+    if (field_24_set) {
+      fseek(file, 8, SEEK_CUR);  // f24: timestamps?
     }
-    fseek(f_dst, cipher_pos, SEEK_SET);
-    fwrite(frame_ciphered, sizeof(frame_ciphered), 1, f_dst);
-
-    printf("frame %d (len=(0x%x, 0x%x), key=0x%x, patch=0x%x)\n",  //
-           (int)ctx->frame,                                        //
-           compressed_size,                                        //
-           (int)decompressed_size,                                 //
-           (int)key_pos,                                           //
-           (int)cipher_pos                                         //
-    );
   }
 
-  fseek(ctx->file, frame_pos + (long)compressed_size, SEEK_SET);
-  ctx->frame++;
+  int32_t last_frame_id = -(ctx->field_14d8.total_frame_count - 1);
+  while (enum_state == PMLXZJ_ENUM_CONTINUE && last_frame_id != frame_info.frame_id) {
+    // seek stream2
+    if (field_24_set) {
+      uint32_t stream2_len = 0;
+      fread(&stream2_len, sizeof(stream2_len), 1, file);
+      if (stream2_len != 0) {
+        fseek(file, (long)stream2_len, SEEK_CUR);
+      }
+    }
+
+    // Read frame id. If `frame_id` is negative, the frame uses previous content from previous frame.
+    fread(&frame_info.frame_id, sizeof(frame_info.frame_id), 1, file);
+    while (enum_state == PMLXZJ_ENUM_CONTINUE && frame_info.frame_id > 0) {
+      int32_t eof_mark;
+
+      // read cords
+      fread(&frame_info.cord, sizeof(frame_info.cord), 1, file);
+
+      // read compressed size and decompressed size, and a special eof mark (not used?)
+      fread(&frame_info.compressed_size, sizeof(frame_info.compressed_size), 1, file);
+      long pos = ftell(file);
+      fread(&frame_info.decompressed_size, sizeof(frame_info.decompressed_size), 1, file);
+      fread(&eof_mark, sizeof(eof_mark), 1, file);
+
+      if ((int32_t)frame_info.decompressed_size == -1 && eof_mark == -1) {
+        fprintf(stderr, "WARN: unknown handling of frame, skip");
+      } else {
+        fseek(file, -8, SEEK_CUR);
+        enum_state = callback(ctx, &frame_info, extra_callback_data);
+      }
+      frame_info.image_id++;
+      fseek(file, pos + (long)frame_info.compressed_size, SEEK_SET);
+      fread(&frame_info.frame_id, sizeof(frame_info.frame_id), 1, file);  // read next frame id.
+    }
+
+    if (field_24_set) {
+      fseek(file, 8, SEEK_CUR);
+    }
+  }
+
+  return enum_state;
 }

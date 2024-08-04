@@ -99,3 +99,23 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src) {
 
   return PMLXZJ_OK;
 }
+
+pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, FILE* f_src) {
+  pmlxzj_state_e status = pmlxzj_init(ctx, f_src);
+  if (status != PMLXZJ_OK) {
+    printf("ERROR: Init pmlxzj exe failed: %d\n", status);
+    return status;
+  }
+  status = pmlxzj_init_audio(ctx);
+  if (status != PMLXZJ_OK) {
+    printf("ERROR: Init pmlxzj (audio) failed: %d\n", status);
+    return status;
+  }
+  status = pmlxzj_init_frame(ctx);
+  if (status != PMLXZJ_OK) {
+    printf("ERROR: Init pmlxzj (frame) failed: %d\n", status);
+    return status;
+  }
+
+  return PMLXZJ_OK;
+}
