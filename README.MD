@@ -31,7 +31,7 @@ by 爱飞的猫@52pojie.cn - 仅供学习交流用途
 首先使用 cmake + mingw 工具链编译。VS 或许可以，未测试。
 
 ```sh
-cmake -Bbuild -DCMAKE_BUILD_TYPE=Release .
+cmake -B build -DCMAKE_BUILD_TYPE=Release .
 cmake --build build
 ```
 

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.22.1)
 project(pmlxzj_unlocker)
 
 option(STATIC_ZLIB "static link zlib" OFF)

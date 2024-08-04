@@ -6,11 +6,12 @@
 #include <zlib.h>
 
 #define MAX_COMPRESSED_CHUNK_SIZE (0x1E848)
+#define ZLIB_INFLATE_BUFFER_SIZE (1024)
 
 bool inflate_chunk(FILE* output, uint8_t* input, size_t length) {
   z_stream strm = {0};
   strm.next_in = (Bytef*)input;
-  strm.avail_in = length;
+  strm.avail_in = (uInt)length;
 
   if (inflateInit(&strm) != Z_OK) {
     fprintf(stderr, "Failed to initialize inflate\n");
@@ -18,12 +19,11 @@ bool inflate_chunk(FILE* output, uint8_t* input, size_t length) {
   }
 
   bool ok = true;
-  const size_t BUFFER_SIZE = 1024;
-  char buffer[BUFFER_SIZE];
+  char buffer[ZLIB_INFLATE_BUFFER_SIZE];
 
   do {
     strm.next_out = (Bytef*)buffer;
-    strm.avail_out = BUFFER_SIZE;
+    strm.avail_out = ZLIB_INFLATE_BUFFER_SIZE;
 
     int ret = inflate(&strm, Z_NO_FLUSH);
 
@@ -39,7 +39,7 @@ bool inflate_chunk(FILE* output, uint8_t* input, size_t length) {
       break;
     }
 
-    size_t output_length = BUFFER_SIZE - strm.avail_out;
+    size_t output_length = ZLIB_INFLATE_BUFFER_SIZE - strm.avail_out;
     fwrite(buffer, 1, output_length, output);
   } while (strm.avail_out == 0);
 
