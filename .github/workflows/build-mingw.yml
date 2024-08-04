@@ -33,7 +33,13 @@ jobs:
             --config Release \
             --target pmlxzj_unlocker
 
+      - name: Prepare Archive
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          cp -R LICENSE README.MD assets build/*.exe dist/
+
       - uses: actions/upload-artifact@v4
         with:
           name: pmlxzj_unlocker
-          path: build/*.exe
+          path: dist/
