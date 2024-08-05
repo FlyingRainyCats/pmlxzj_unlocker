@@ -1,4 +1,4 @@
-name: Build with CMake
+name: Build (msys2)
 
 on:
   push:
