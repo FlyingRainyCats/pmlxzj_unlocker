@@ -1,6 +1,6 @@
 #include "pmlxzj.h"
 #include "pmlxzj_commands.h"
-#include "utils.h"
+#include "pmlxzj_utils.h"
 
 #include <stddef.h>
 
