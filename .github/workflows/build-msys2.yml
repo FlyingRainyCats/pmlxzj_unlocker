@@ -80,8 +80,8 @@ jobs:
             mv "$exe_path" "${exe_path%.exe}_ucrt64.exe"
           done
 
-          cp dist_mingw32/*.exe dist/.
-          cp dist_ucrt64/. dist/.
+          cp -r dist_mingw32/*.exe dist/.
+          cp -r dist_ucrt64/. dist/.
 
       - uses: actions/upload-artifact@v4
         with:
