@@ -76,9 +76,9 @@ jobs:
           for exe_path in dist_mingw32/*.exe; do
             mv "$exe_path" "${exe_path%.exe}_i686.exe"
           done
-          for exe_path in dist_ucrt64/*.exe; do
-            mv "$exe_path" "${exe_path%.exe}_ucrt64.exe"
-          done
+          # for exe_path in dist_ucrt64/*.exe; do
+          #   mv "$exe_path" "${exe_path%.exe}_ucrt64.exe"
+          # done
 
           cp -r dist_mingw32/*.exe dist/.
           cp -r dist_ucrt64/. dist/.
