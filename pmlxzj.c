@@ -80,6 +80,9 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src) {
   if (ctx->footer.mode_1_nonce) {
     ctx->encrypt_mode = 1;
     snprintf(ctx->nonce_buffer, sizeof(ctx->nonce_buffer) - 1, "%d", ctx->footer.mode_1_nonce);
+    for(int i = 0; i < 20; i++) {
+      ctx->nonce_buffer_mode_1[i] = ctx->nonce_buffer[20 - i];
+    }
   } else if (ctx->footer.mode_2_nonce) {
     ctx->encrypt_mode = 2;
     return PMLXZJ_UNSUPPORTED_MODE_2;

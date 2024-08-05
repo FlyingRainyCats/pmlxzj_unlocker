@@ -10,7 +10,7 @@ void skip_sized_packet(FILE* f) {
   uint32_t skip = 0;
   fread(&skip, sizeof(skip), 1, f);
   if (skip != 0) {
-    fseek(f, skip, SEEK_CUR);
+    fseek(f, (long)skip, SEEK_CUR);
   }
 }
 
@@ -18,7 +18,7 @@ pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx) {
   FILE* f = ctx->file;
 
   // init code from: TPlayForm_repareplay2
-  fseek(f, ctx->footer.offset_data_start + 4 /* audio_offset */, SEEK_SET);
+  fseek(f, (long)ctx->footer.offset_data_start + 4 /* audio_offset */, SEEK_SET);
 
   fread(&ctx->field_14d8, sizeof(ctx->field_14d8), 1, f);
 
@@ -81,8 +81,6 @@ pmlxzj_enumerate_state_e pmlxzj_enumerate_images(pmlxzj_state_t* ctx,
     fread(&frame_info.decompressed_size, sizeof(frame_info.decompressed_size), 1, file);
     fseek(file, -4, SEEK_CUR);
     enum_state = callback(ctx, &frame_info, extra_callback_data);
-    //    printf("frame %d(id=%d) (len=0x%x, offset=0x%x)\n", frame_info.frame_id, frame_info.image_id, compressed_size,
-    //    (int)ftell(file));
     frame_info.image_id++;
 
     fseek(file, pos + (long)frame_info.compressed_size, SEEK_SET);

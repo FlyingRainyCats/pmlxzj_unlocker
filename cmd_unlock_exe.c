@@ -19,9 +19,8 @@ pmlxzj_enumerate_state_e enum_frame_patch_mode_1(pmlxzj_state_t* app, pmlxzj_fra
     fseek(app->file, cipher_pos, SEEK_SET);
     fread(frame_ciphered, sizeof(frame_ciphered), 1, app->file);
 
-    char* p_nonce_key = &app->nonce_buffer[20];
-    for (int i = 0; i < 20; i++, p_nonce_key--) {
-      frame_ciphered[i] = (char)(frame_ciphered[i] ^ frame_key[i] ^ *p_nonce_key);
+    for (int i = 0; i < 20; i++) {
+      frame_ciphered[i] = (char)(frame_ciphered[i] ^ frame_key[i] ^ app->nonce_buffer_mode_1[i]);
     }
     fseek(f_dst, cipher_pos, SEEK_SET);
     fwrite(frame_ciphered, sizeof(frame_ciphered), 1, f_dst);

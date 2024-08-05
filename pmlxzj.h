@@ -85,6 +85,7 @@ typedef struct {
   // encrypt_mode: 0(no_encryption), 1(mode_1), 2(mode_2)
   int encrypt_mode;
   char nonce_buffer[21];
+  char nonce_buffer_mode_1[20];
   pmlxzj_footer_t footer;
   uint32_t* idx1;
   size_t idx1_count;
