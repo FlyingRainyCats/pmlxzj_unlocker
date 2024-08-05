@@ -1,0 +1,58 @@
+name: Build with CMake
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    name: "🚧 ${{ matrix.icon }} ${{ matrix.sys }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - icon: 🟦
+            sys: mingw32
+          - icon: 🟨
+            sys: ucrt64
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: '${{ matrix.icon }} Set up msys2-${{ matrix.sys }}'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: "${{matrix.sys}}"
+          update: true
+          install: curl git
+          pacboy: >-
+            toolchain:p
+            cmake:p
+            ninja:p
+
+      - name: Configure & Build
+        run: |
+          cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSTATIC_ZLIB=ON \
+            -B build -S .
+          cmake --build build \
+            --config Release \
+            --target pmlxzj_unlocker
+
+      - name: Prepare Archive
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          cp -R LICENSE README.MD assets build/*.exe dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: "pmlxzj_unlocker_${{matrix.sys}}"
+          path: dist/
