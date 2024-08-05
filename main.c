@@ -2,8 +2,12 @@
 #include <string.h>
 #include "pmlxzj_commands.h"
 
+#ifndef PROJECT_VERSION
+#define PROJECT_VERSION "0.0.0-unknown"
+#endif
+
 int main(int argc, char** argv) {
-  printf("pmlxzj_unlocker by AiFeiDeMao@52pojie.cn (FlyingRainyCats)\n");
+  printf("pmlxzj_unlocker v" PROJECT_VERSION " by AiFeiDeMao@52pojie.cn (FlyingRainyCats)\n");
   if (argc <= 2) {
     pmlxzj_usage(argv[0]);
     return 1;
