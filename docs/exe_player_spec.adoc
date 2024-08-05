@@ -1,0 +1,192 @@
+= 《屏幕录像专家》EXE 播放器文件格式
+
+该文档简单介绍了利用“屏幕录像专家”生成的 EXE 播放器文件的部分格式信息。
+
+== EXE 与 LXE
+
+EXE 播放器其实就是一个 `LXE` 数据播放器。将 EXE 转换为 LXE 格式只是将 EXE 可执行程序部分进行加密，余下数据部分一致。
+
+== 数据“尾”
+
+录像数据通常在 EXE 的 Overlay 区域。该区域的起始标识符为 `DATASTART\0`：
+
+[source,text]
+----
++---------+--------------------------------------------------+------------------+
+|    地址 | 00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f | 预览             |
++---------+--------------------------------------------------+------------------+
+|00A:AE00 | 44 41 54 41 53 54 41 52  54 00 BB CD 28 FE 01 00 | DATASTART.»Í(þ.. |
++---------+--------------------------------------------------+------------------+
+----
+
+不过 EXE 并不是从该数据头开始读，而是从文件结尾的 `0x2C` 字节开始：
+
+[source,text]
+----
++------+--------------------------------------------------+------------------+
+| 地址 | 00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f | 预览             |
++------+--------------------------------------------------+------------------+
+| 0000 | 25 3B 00 00 00 00 00 00  00 00 00 00 00 00 00 00 | %;.............. |
+| 0010 | 00 00 00 00 08 00 00 00  08 00 00 00 0A AE 0A 00 | ................ |
+| 0020 | 70 6D 6C 78 7A 6A 74 6C  78 00 00 00             | pmlxzjtlx...     |
+-------+--------------------------------------------------+-------------------
+----
+
+- 偏移 `0x00` (`uint32_t`) 是 “播放加密” 锁定时的随机值，记作 `nonce`。
+- 偏移 `0x1C` (`uint32_t`) 是数据起始位置偏移。此处为 `0x0aae0a`。
+- 偏移 `0x20` (`char[0x0c]`) 是播放器特征码。
+
+== 数据“头”
+
+回到数据头指向的 `0x0aae0a`，此处的数据部分没有深入研究，只给出研究过的那些：
+
+[source,c]
+-----
+struct header {
+  uint32_t audio_offset;
+  struct {
+    uint32_t field_0;
+    uint32_t field_4;
+    uint32_t field_8;
+    int32_t total_frame_count;
+    uint32_t field_10;
+    uint32_t field_14;
+    uint32_t field_18;
+    uint32_t field_1C;
+    uint32_t field_20;
+    uint32_t field_24;
+  } field_14D8;
+  char[20] field_2C;
+  char[20] field_40;
+  char[40] field_54;
+  uint32_t field_7C;
+  uint32_t field_80;
+  uint32_t field_84;
+  char[20] field_88;
+  uint32_t field_9C;
+  uint8_t field_A0;
+  uint8_t field_A1;
+  uint8_t field_A2;
+  uint8_t field_A3;
+
+  if (field_14D8.field_24) {
+    float unk1;
+    float unk2;
+    uint32_t stream2_len;
+    uint8_t stream2[stream2_len];
+  }
+};
+-----
+
+过了 `header` 结构体后，就是视频数据了。
+
+== 视频数据
+
+就是第一帧 `first_frame` 的内容，然后后面就是重复的 `other_frame` 数据：
+
+[source,c]
+----
+struct frame_data {
+  uint32_t len;
+  uint32_t decompressed_len;
+  uint8_t data[len - 4];
+};
+
+// 入口的第一帧
+struct first_frame {
+  frame_data frame; // 帧信息
+  int32_t frame_id; // 帧序号
+
+  // field_24 == 1 的情况，会有两个额外的 f32 数据。
+  if (field_24 == 1) {
+    float unknown_1;
+    float unknown_2;
+  }
+}
+
+// 后续则是一直读取 `other_frame` 解构，直到结束
+struct other_frame {
+  // 未知数据流
+  uint32_t stream2_len;
+  uint8_t stream2[stream2_len];
+
+  uint32_t frame_state; // 帧状态
+
+  if (frame_state > 0) {
+    RECT patch_cord; // 坐标相关
+
+    while (frame_state > 0) {
+      frame_data frame; // 帧信息
+      int32_t frame_id; // 帧序号
+    }
+  }
+
+  // field_24 == 1 的情况，会有两个额外的 f32 数据。
+  if (field_24 == 1) {
+    float unknown_1;
+    float unknown_2;
+  }
+};
+----
+
+读取完最后一帧时，`other_frame.frame_id` 等于 `-(field_14d8.total_frame_count - 1)`。
+
+== 音频数据
+
+音频数据偏移存储在初始偏移处（如下方地址 `00AAE0A` 处）：
+
+[source,text]
+----
++---------+--------------------------------------------------+------------------+
+|    地址 | 00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f | 预览             |
++---------+--------------------------------------------------+------------------+
+|00A:AE00 | 44 41 54 41 53 54 41 52  54 00 BB CD 28 FE 01 00 | DATASTART.»Í(þ.. |
++---------+--------------------------------------------------+------------------+
+----
+
+其中 `BB CD 28 FE` 为 `0xfe28cdbb`，取对应负数得到偏移 `0x1d73245`。
+
+[source,text]
+----
++----------+--------------------------------------------------+
+|     地址 | 00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f |
++----------+--------------------------------------------------+
+| 1D7:3240 |                F8 02 00  00 18 59 00 00 78 DA 85 |
+| 1D7:3250 | 7D CB AE 64 4B 73 56 44  AE EA 73 6C 10 60 83 84 |
++----------+--------------------------------------------------+
+----
+
+第一个值 `F8 02 00 00` 表示音频共有 `0x2f8` 段，随后每一段都是地址前缀编码的数据。
+
+[source,c]
+-----
+struct audio_data {
+  uint32_t segment_count;
+  struct audio_segment {
+    uint32_t len;
+    uint8_t  data[len];
+  } segments[segment_count];
+};
+-----
+
+每一段通过 GZip 解压，然后拼接就能得到完整的 `.wav` 格式音频了。
+
+== “编辑加密” 锁定
+
+- 每个“大帧”会加密中间的 20 字节
+  - “大帧”的判定条件是 `frame.len > 10240`。
+  - `&frame.data[frame.len / 2 - 4 .. frame.len / 2 + 16]`。
+- 加密算法是 `xor`，密钥为 `(&data[0..20] XOR nonce_key)`。
+
+`nonce_key` 的获取方式：
+
+[source,c]
+----
+// 文件结尾 -0x2c 偏移处的值
+uint32_t nonce = 0x3b25;
+
+char nonce_key[20];
+char buffer[21] = { 0 };
+snprintf(buffer, 20, "%d", nonce);
+nonce_key = reverse(&buffer[1..21]);
+----
