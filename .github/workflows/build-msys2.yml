@@ -1,0 +1,89 @@
+name: Build (msys2)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    name: "🚧 ${{ matrix.icon }} ${{ matrix.sys }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - icon: 🟦
+            sys: mingw32
+          - icon: 🟨
+            sys: ucrt64
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: '${{ matrix.icon }} Set up msys2-${{ matrix.sys }}'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: "${{matrix.sys}}"
+          update: true
+          install: curl git
+          pacboy: >-
+            toolchain:p
+            cmake:p
+            ninja:p
+
+      - name: Configure & Build
+        run: |
+          cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSTATIC_ZLIB=ON \
+            -B build -S .
+          cmake --build build \
+            --config Release \
+            --target pmlxzj_unlocker
+
+      - name: Prepare Archive
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          cp -R LICENSE README.MD assets build/*.exe dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: "pmlxzj_unlocker_${{matrix.sys}}"
+          path: dist/
+  bundle:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pmlxzj_unlocker_ucrt64
+          path: dist_ucrt64
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pmlxzj_unlocker_mingw32
+          path: dist_mingw32
+
+      - name: bundle all
+        run: |
+          mkdir -p dist
+          for exe_path in dist_mingw32/*.exe; do
+            mv "$exe_path" "${exe_path%.exe}_i686.exe"
+          done
+          # for exe_path in dist_ucrt64/*.exe; do
+          #   mv "$exe_path" "${exe_path%.exe}_ucrt64.exe"
+          # done
+
+          cp -r dist_mingw32/*.exe dist/.
+          cp -r dist_ucrt64/. dist/.
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmlxzj_unlocker
+          path: dist/

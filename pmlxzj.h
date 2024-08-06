@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define PMLXZJ_UNUSED_PARAMETER(x) (void)(x)
-
 // size = 0xB4
 #pragma pack(push, 1)
 typedef struct {

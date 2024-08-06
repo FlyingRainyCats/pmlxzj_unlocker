@@ -1,4 +1,5 @@
 #include "pmlxzj.h"
+#include "pmlxzj_utils.h"
 #include "pmlxzj_commands.h"
 
 pmlxzj_enumerate_state_e enum_frame_print_info(pmlxzj_state_t* app,

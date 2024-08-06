@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define PL_MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define PMLXZJ_MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define PMLXZJ_UNUSED_PARAMETER(x) (void)(x)
 
 static inline void pmlxzj_util_hexdump(void* ptr, int buflen) {
   unsigned char* buf = (unsigned char*)ptr;
@@ -33,7 +34,7 @@ static inline void pmlxzj_util_copy_file(FILE* f_dst, FILE* f_src) {
   char* buffer = malloc(4096);
   size_t bytes_read;
   do {
-    bytes_read = fread(buffer, 1, PL_MIN(4096, bytes_left), f_src);
+    bytes_read = fread(buffer, 1, PMLXZJ_MIN(4096, bytes_left), f_src);
     bytes_left -= bytes_read;
     fwrite(buffer, 1, bytes_read, f_dst);
   } while (bytes_read != 0);

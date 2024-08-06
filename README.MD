@@ -26,6 +26,17 @@ by 爱飞的猫@52pojie.cn - 仅供学习交流用途
 
 用到了 `zlib` 进行数据解压缩操作。
 
+## 两个版本
+
+默认分发的二进制文件（通过 GitHub Actions 构建）有两个版本：
+
+- `pmlxzj_unlocker-i686.exe`
+  - msys2-mingw32 构建，支持 32 位系统。
+  - 文件名包含非 ASCII 字符时可能有兼容性问题。
+- `pmlxzj_unlocker.exe`
+  - msys2-ucrt64 构建，对新系统支援较好，不支持 32 位系统。
+  - 支持包含非 ASCII 字符的文件名。
+
 ## 使用方法
 
 首先使用 cmake + mingw 工具链编译。VS 或许可以，未测试。
