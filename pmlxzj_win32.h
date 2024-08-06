@@ -5,6 +5,8 @@
 #ifdef _WIN32
 #include <locale.h>
 #include <windows.h>
+#include <shellapi.h>
+
 static inline char* Win32W2U8(HANDLE hHeap, const wchar_t* text) {
   int size_needed = WideCharToMultiByte(CP_UTF8, 0, text, -1, NULL, 0, NULL, NULL);
   char* result = HeapAlloc(hHeap, HEAP_ZERO_MEMORY, size_needed * sizeof(char));

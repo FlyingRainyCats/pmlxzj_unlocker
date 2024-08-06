@@ -52,3 +52,7 @@ else ()
         target_link_options(pmlxzj_unlocker PRIVATE -static-libgcc -Wl,--gc-sections)
     endif()
 endif ()
+
+if(WIN32)
+    target_link_libraries(pmlxzj_unlocker shell32.lib)
+endif()
