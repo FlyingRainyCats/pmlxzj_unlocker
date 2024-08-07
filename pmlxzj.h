@@ -91,6 +91,7 @@ typedef struct {
   size_t idx2_count;
 
   pmlxzj_config_14d8_t field_14d8;
+  long frame_metadata_offset;
   long first_frame_offset;
   long frame;
 
@@ -129,12 +130,16 @@ typedef struct {
   uint32_t compressed_size;
   uint32_t decompressed_size;
 } pmlxzj_frame_info_t;
-typedef pmlxzj_enumerate_state_e(pmlxzj_enumerate_callback_t)(pmlxzj_state_t* ctx, pmlxzj_frame_info_t* frame, void* extra_callback_data);
+typedef pmlxzj_enumerate_state_e(pmlxzj_enumerate_callback_t)(pmlxzj_state_t* ctx,
+                                                              pmlxzj_frame_info_t* frame,
+                                                              void* extra_callback_data);
 
 pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src);
 pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx);
 pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx);
 pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, FILE* f_src);
-pmlxzj_enumerate_state_e pmlxzj_enumerate_images(pmlxzj_state_t* ctx, pmlxzj_enumerate_callback_t* callback, void* extra_callback_data);
+pmlxzj_enumerate_state_e pmlxzj_enumerate_images(pmlxzj_state_t* ctx,
+                                                 pmlxzj_enumerate_callback_t* callback,
+                                                 void* extra_callback_data);
 
 bool pmlxzj_inflate_audio(pmlxzj_state_t* ctx, FILE* f_audio);

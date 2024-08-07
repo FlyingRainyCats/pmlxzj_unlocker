@@ -80,7 +80,7 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src) {
   if (ctx->footer.mode_1_nonce) {
     ctx->encrypt_mode = 1;
     snprintf(ctx->nonce_buffer, sizeof(ctx->nonce_buffer) - 1, "%d", ctx->footer.mode_1_nonce);
-    for(int i = 0; i < 20; i++) {
+    for (int i = 0; i < 20; i++) {
       ctx->nonce_buffer_mode_1[i] = ctx->nonce_buffer[20 - i];
     }
   } else if (ctx->footer.mode_2_nonce) {
@@ -88,6 +88,19 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src) {
     return PMLXZJ_UNSUPPORTED_MODE_2;
   } else {
     ctx->encrypt_mode = 0;
+  }
+
+  fseek(f_src, (long)ctx->footer.offset_data_start, SEEK_SET);
+  int32_t variant_i32 = 0;
+  fread(&variant_i32, sizeof(variant_i32), 1, f_src);
+  if (variant_i32 <= 0) {
+    // New format
+    ctx->audio_start_offset = (long)-variant_i32;
+    ctx->frame_metadata_offset = (long)ctx->footer.offset_data_start + (long)sizeof(variant_i32);
+  } else {
+    // Legacy format
+    ctx->frame_metadata_offset = (long)variant_i32;
+    ctx->audio_start_offset = (long)ctx->footer.offset_data_start + (long)sizeof(variant_i32);
   }
 
   long offset = (long)(ctx->file_size - sizeof(ctx->footer));

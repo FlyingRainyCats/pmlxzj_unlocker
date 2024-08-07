@@ -18,8 +18,7 @@ pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx) {
   FILE* f = ctx->file;
 
   // init code from: TPlayForm_repareplay2
-  fseek(f, (long)ctx->footer.offset_data_start + 4 /* audio_offset */, SEEK_SET);
-
+  fseek(f, (long)ctx->frame_metadata_offset, SEEK_SET);
   fread(&ctx->field_14d8, sizeof(ctx->field_14d8), 1, f);
 
   bool f24 = ctx->field_14d8.field_24 == 1;
