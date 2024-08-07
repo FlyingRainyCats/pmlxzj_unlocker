@@ -4,8 +4,9 @@
 
 #ifdef _WIN32
 #include <locale.h>
-#include <shellapi.h>
 #include <windows.h>
+
+#include <shellapi.h>
 
 static inline char* Win32W2U8(HANDLE hHeap, const wchar_t* text) {
   int size_needed = WideCharToMultiByte(CP_UTF8, 0, text, -1, NULL, 0, NULL, NULL);
