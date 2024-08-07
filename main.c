@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "pmlxzj_commands.h"
 #include "pmlxzj_win32.h"
 
@@ -12,6 +13,7 @@
 #endif
 
 int main(int argc, char** argv) {
+  optind++;
   FixWindowsUnicodeSupport(&argv);
 
   printf("pmlxzj_unlocker v" PROJECT_VERSION " by 爱飞的猫@52pojie.cn (FlyingRainyCats)\n");
