@@ -63,7 +63,9 @@ pmlxzj_state_e scan_file_u32_array(uint32_t** scanned_array, size_t* count, FILE
   return result;
 }
 
-pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src) {
+pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
+  FILE* f_src = params->input_file;
+
   memset(ctx, 0, sizeof(*ctx));
   ctx->file = f_src;
 
@@ -77,15 +79,33 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src) {
     return PMLXZJ_MAGIC_NOT_MATCH;
   }
 
-  if (ctx->footer.mode_1_nonce) {
+  if (ctx->footer.edit_lock_nonce) {
     ctx->encrypt_mode = 1;
-    snprintf(ctx->nonce_buffer, sizeof(ctx->nonce_buffer) - 1, "%d", ctx->footer.mode_1_nonce);
-    for (int i = 0; i < 20; i++) {
-      ctx->nonce_buffer_mode_1[i] = ctx->nonce_buffer[20 - i];
+    char buffer[21] = {0};
+    snprintf(buffer, sizeof(buffer) - 1, "%d", ctx->footer.edit_lock_nonce);
+    for (int i = 1; i < 20; i++) {
+      ctx->nonce_buffer[i] = buffer[20 - i];
     }
-  } else if (ctx->footer.mode_2_nonce) {
+  } else if (ctx->footer.play_lock_password_checksum) {
     ctx->encrypt_mode = 2;
-    return PMLXZJ_UNSUPPORTED_MODE_2;
+
+    uint32_t expected_checksum = ctx->footer.play_lock_password_checksum;
+    uint32_t actual_checksum = pmlxzj_password_checksum(params->password);
+    if (actual_checksum != expected_checksum) {
+      fprintf(stderr, "ERROR: Password checksum mismatch.\n");
+      fprintf(stderr, "       Expected: 0x%08x, got 0x%08x.\n", expected_checksum, actual_checksum);
+      if (params->resume_on_bad_password) {
+        fprintf(stderr, "WARN:  Continue without valid password...\n");
+      } else {
+        return PMLXZJ_PASSWORD_ERROR;
+      }
+    }
+
+    char buffer[21] = {0};
+    strncpy(buffer, params->password, sizeof(buffer));
+    for (int i = 1; i < 20; i++) {
+      ctx->nonce_buffer[i] = buffer[20 - i];
+    }
   } else {
     ctx->encrypt_mode = 0;
   }
@@ -116,8 +136,8 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, FILE* f_src) {
   return PMLXZJ_OK;
 }
 
-pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, FILE* f_src) {
-  pmlxzj_state_e status = pmlxzj_init(ctx, f_src);
+pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
+  pmlxzj_state_e status = pmlxzj_init(ctx, params);
   if (status != PMLXZJ_OK) {
     printf("ERROR: Init pmlxzj exe failed: %d\n", status);
     return status;
@@ -134,4 +154,13 @@ pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, FILE* f_src) {
   }
 
   return PMLXZJ_OK;
+}
+
+uint32_t pmlxzj_password_checksum(const char* password) {
+  uint32_t checksum = 0x7D5;
+  for (int i = 0; i < 20 && *password; i++) {
+    uint8_t chr = *password++;
+    checksum += chr * (i + i / 5 + 1);
+  }
+  return checksum;
 }

@@ -3,14 +3,14 @@
 #include "pmlxzj.h"
 #include "pmlxzj_commands.h"
 
-struct pmlxzj_cmd_print_info_param_t {
+typedef struct {
   bool verbose;
-};
+} pmlxzj_cmd_print_info_param_t;
 
 pmlxzj_enumerate_state_e enum_frame_print_info(pmlxzj_state_t* app,
                                                pmlxzj_frame_info_t* frame,
                                                void* extra_callback_data) {
-  struct pmlxzj_cmd_print_info_param_t* param = extra_callback_data;
+  pmlxzj_cmd_print_info_param_t* param = extra_callback_data;
 
   long frame_start_offset = ftell(app->file);
   if (frame->compressed_size > 10240) {
@@ -26,7 +26,7 @@ pmlxzj_enumerate_state_e enum_frame_print_info(pmlxzj_state_t* app,
 }
 
 int pmlxzj_cmd_print_info(int argc, char** argv) {
-  struct pmlxzj_cmd_print_info_param_t param = {0};
+  pmlxzj_cmd_print_info_param_t param = {0};
   int option = -1;
   while ((option = getopt(argc, argv, "v")) != -1) {
     if (option == 'v') {
@@ -38,7 +38,7 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
     }
   }
 
-  if (optind >= argc) {
+  if (argc < optind + 1) {
     fprintf(stderr, "ERROR: 'input' required.\n");
     pmlxzj_usage(argv[0]);
     return 1;
@@ -51,7 +51,9 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
   }
 
   pmlxzj_state_t app = {0};
-  pmlxzj_state_e status = pmlxzj_init_all(&app, f_src);
+  pmlxzj_user_params_t params = {0};
+  params.input_file = f_src;
+  pmlxzj_state_e status = pmlxzj_init_all(&app, &params);
   if (status != PMLXZJ_OK) {
     printf("ERROR: Init pmlxzj failed: %d\n", status);
     return 1;
@@ -68,10 +70,26 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
 
   printf("offset_data_start: 0x%x\n", app.footer.offset_data_start);
   printf("frame offset: 0x%lx\n", app.first_frame_offset);
-  printf("audio offset: 0x%lx\n", app.audio_start_offset);
+  printf("audio offset: ");
+  if (app.audio_start_offset) {
+    printf("0x%08lx\n", app.audio_start_offset);
+  } else {
+    printf("(none)\n");
+  }
 
-  printf("encrypt mode 1 nonce: %d\n", app.footer.mode_1_nonce);
-  printf("encrypt mode 2 nonce: %d\n", app.footer.mode_2_nonce);
+  printf("encrypt edit_lock nonce: ");
+  if (app.footer.edit_lock_nonce) {
+    printf("0x%08x\n", app.footer.edit_lock_nonce);
+  } else {
+    printf("(unset)\n");
+  }
+  printf("encrypt play_lock password checksum: ");
+  if (app.footer.play_lock_password_checksum) {
+    printf("0x%08x\n", app.footer.play_lock_password_checksum);
+  } else {
+    printf("(unset)\n");
+  }
+
   pmlxzj_enumerate_images(&app, enum_frame_print_info, &param);
 
   return 0;

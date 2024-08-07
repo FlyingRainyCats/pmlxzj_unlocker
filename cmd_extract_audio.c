@@ -16,7 +16,9 @@ int pmlxzj_cmd_extract_audio(int argc, char** argv) {
   }
 
   pmlxzj_state_t app = {0};
-  pmlxzj_state_e status = pmlxzj_init(&app, f_src);
+  pmlxzj_user_params_t params = {0};
+  params.input_file = f_src;
+  pmlxzj_state_e status = pmlxzj_init(&app, &params);
   if (status != PMLXZJ_OK) {
     printf("ERROR: Init pmlxzj exe failed: %d\n", status);
     return 1;
