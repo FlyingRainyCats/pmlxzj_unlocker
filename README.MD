@@ -18,6 +18,10 @@ by 爱飞的猫@52pojie.cn - 仅供学习交流用途
 
 - 音频提取 (仅限 wav)
 - 解除“编辑加密”锁定
+- 解除“播放加密”锁定 (需要提供正确密码 [^password_note] [^non_ascii_password_note])
+
+[^password_note]: 密码的第一位字符不参与解密。
+[^non_ascii_password_note]: 包含非 ASCII 字符的密码需要储存到文件，并透过 `-P` 指定。
 
 测试于下述《屏幕录像专家》版本生成的 EXE 播放器文件：
 
@@ -38,30 +42,55 @@ by 爱飞的猫@52pojie.cn - 仅供学习交流用途
     - msys2-ucrt64 构建，对新系统支援较好，不支持 32 位系统。
     - 支持包含非 ASCII 字符的文件名。
 
-## 使用方法
+## 编译
 
-首先使用 cmake + mingw 工具链编译。VS 或许可以，未测试。
+使用 cmake + mingw 工具链编译。VS 或许可以，未测试。
 
 ```sh
 cmake -B build -DCMAKE_BUILD_TYPE=Release .
 cmake --build build
 ```
 
-然后运行 `unlock` 指令解锁：
+## 使用方法
+
+### 解锁视频
+
+使用 `unlock` 指令解锁：
 
 ```shell
-# Win
-.\build\pmlxzj_unlocker.exe unlock "录像1.exe" "录像1_解锁.exe"
-
-# Other
-./build/pmlxzj_unlocker.exe unlock "录像1.exe" "录像1_解锁.exe"
+./pmlxzj_unlocker.exe unlock "录像1.exe" "录像1_解锁.exe"
+./pmlxzj_unlocker.exe unlock -p password "录像1.exe" "录像1_解锁.exe"
+./pmlxzj_unlocker.exe unlock -P /path/to/password.txt "录像1.exe" "录像1_解锁.exe"
 ```
 
-其它支持的指令有 `audio-dump` 提取音频，和 `info` 查看信息。
+※ 若密码包含中文或其它非 ASCII 字符，先存储至文件 (GBK 编码)，然后透过 `-P` 参数指定。
+
+此外可以指定 `-r` 在密码错误时继续、`-v` 输出更多信息。
+
+### 提取音频
+
+目前只支持 `WAV` 格式音频提取。
+
+```shell
+./pmlxzj_unlocker.exe audio-dump "录像1.exe" "录像1.wav"
+```
+
+### 查看信息
+
+查看部分读取的信息。
+
+```shell
+./pmlxzj_unlocker.exe info "录像1.exe"
+./pmlxzj_unlocker.exe info -v "录像1.exe"
+```
+
+此外可以指定 `-v` 输出更多信息。
 
 ### 意义不明
 
-有很多地方还没搞懂，也有很多参数能控制读取文件的偏移。目前只是对着部分已知的文件进行测试。
+有很多地方还没搞懂，也有很多参数能控制读取文件的偏移。
+
+目前只是对着部分已知的文件进行测试。
 
 ## 碎碎念
 
