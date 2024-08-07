@@ -173,10 +173,10 @@ struct audio_data {
 
 == “编辑加密” 锁定
 
-- 每个“大帧”会加密中间的 20 字节
-  - “大帧”的判定条件是 `frame.len > 10240`。
-  - `&frame.data[frame.len / 2 - 4 .. frame.len / 2 + 16]`。
-- 加密算法是 `xor`，密钥为 `(&data[0..20] XOR nonce_key)`。
+* 每个“大帧”会加密中间的 20 字节
+** “大帧”的判定条件是 `frame.len > 10240`。
+** `&frame.data[frame.len / 2 - 4 .. frame.len / 2 + 16]`。
+* 加密算法是 `xor`，密钥为 `(&data[0..20] XOR nonce_key)`。
 
 `nonce_key` 的获取方式：
 

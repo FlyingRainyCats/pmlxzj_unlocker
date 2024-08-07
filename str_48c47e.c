@@ -9,7 +9,7 @@ uint8_t byte_48C47E[40] = {
 };
 
 void dump_byte_48C47E(void) {
-  for(int i = 0; i < 40; i++) {
+  for (int i = 0; i < 40; i++) {
     byte_48C47E[i] ^= 100 - i;
   }
   FILE* f = fopen("dump.bin", "wb");
@@ -24,7 +24,7 @@ void calc_start_offset(void) {
 }
 
 int main() {
-//  dump_byte_48C47E();
+  //  dump_byte_48C47E();
   calc_start_offset();
   return 0;
 }

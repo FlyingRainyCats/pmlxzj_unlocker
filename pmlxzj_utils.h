@@ -1,9 +1,9 @@
 #pragma once
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 
 #define PMLXZJ_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define PMLXZJ_UNUSED_PARAMETER(x) (void)(x)

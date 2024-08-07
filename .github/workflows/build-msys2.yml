@@ -57,7 +57,7 @@ jobs:
           name: "pmlxzj_unlocker_${{matrix.sys}}"
           path: dist/
   bundle:
-    needs: [build]
+    needs: [ build ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
