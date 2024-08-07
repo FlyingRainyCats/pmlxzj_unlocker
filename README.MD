@@ -1,14 +1,14 @@
 # 解除《屏幕录像专家》编辑锁定
 
+[![GitHub License](https://img.shields.io/github/license/FlyingRainyCats/pmlxzj_unlocker)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/FlyingRainyCats/pmlxzj_unlocker)](https://github.com/FlyingRainyCats/pmlxzj_unlocker/releases/latest)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/FlyingRainyCats/pmlxzj_unlocker/build-msys2.yml)](https://github.com/FlyingRainyCats/pmlxzj_unlocker/actions/workflows/build-msys2.yml)
+
 用于解除使用屏幕录像专家对录像进行 “已进行编辑加密” 文件的解密。
 
-解锁前：
-
-![锁定截图](assets/locked.webp)
-
-解锁后：
-
-![解锁后截图](assets/unlocked.webp)
+|             解锁前             |              解锁后               |
+|:---------------------------:|:------------------------------:|
+| ![锁定截图](assets/locked.webp) | ![解锁后截图](assets/unlocked.webp) | 
 
 by 爱飞的猫@52pojie.cn - 仅供学习交流用途
 
@@ -21,6 +21,7 @@ by 爱飞的猫@52pojie.cn - 仅供学习交流用途
 
 测试于下述《屏幕录像专家》版本生成的 EXE 播放器文件：
 
+- V7.5 Build 200701224
 - V2014 Build 0318
 - V2023 Build 0828
 
