@@ -27,7 +27,6 @@ add_executable(pmlxzj_unlocker
         cmd_unlock_exe.c
 )
 target_compile_definitions(pmlxzj_unlocker PRIVATE PROJECT_VERSION="${pmlxzj_unlocker_ver}")
-add_executable(experiment str_48c47e.c)
 
 if (STATIC_ZLIB)
     add_library(ZLIB::ZLIB ALIAS zlibstatic)
@@ -42,7 +41,6 @@ else ()
 endif ()
 
 target_link_libraries(pmlxzj_unlocker ZLIB::ZLIB)
-target_link_libraries(experiment ZLIB::ZLIB)
 
 if (MSVC)
     target_compile_options(pmlxzj_unlocker PRIVATE /W4 /WX)
