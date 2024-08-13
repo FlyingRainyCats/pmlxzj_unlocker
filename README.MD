@@ -17,11 +17,13 @@ by 爱飞的猫@52pojie.cn - 仅供学习交流用途
 支持：
 
 - 音频提取 (仅限 wav)
+- 禁用音频[^disable_audio]
 - 解除“编辑加密”锁定
 - 解除“播放加密”锁定 (需要提供正确密码 [^password_note] [^non_ascii_password_note])
 
 [^password_note]: 密码的第一位字符不参与解密。
 [^non_ascii_password_note]: 包含非 ASCII 字符的密码需要储存到文件，并透过 `-P` 指定。
+[^disable_audio]: 禁用音频后，《屏幕录像专家》可以将视频转码到无音频的 MP4 文件。
 
 测试于下述《屏幕录像专家》版本生成的 EXE 播放器文件：
 
@@ -69,10 +71,22 @@ cmake --build build
 
 ### 提取音频
 
-目前只支持 `WAV` 格式音频提取。
+目前只支持 `WAV` (压缩) 和 `MP3` 格式音频提取。
 
 ```shell
 ./pmlxzj_unlocker.exe audio-dump "录像1.exe" "录像1.wav"
+```
+
+### 禁用音频
+
+如果 EXE 播放器启用了声音压缩，那么《屏幕录像专家》将拒绝转换视频到 MP4 等格式。
+
+为了绕过这一限制，可以使用工具将 EXE 播放器中的音频禁用，然后进行转换。
+
+※ 如果处理《屏幕录像专家》7.0 或之前的版本生成的 EXE 播放器，需要使用《屏幕录像专家》升级播放器然后再处理。
+
+```shell
+./pmlxzj_unlocker.exe audio-disable "录像1.exe" "录像1_无音频.exe"
 ```
 
 ### 查看信息

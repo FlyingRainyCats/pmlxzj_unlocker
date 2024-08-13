@@ -12,6 +12,18 @@
 #pragma execution_character_set("utf-8")
 #endif
 
+struct pmlxzj_commands_t {
+  const char* name;
+  int (*handler)(int argc, char** argv);
+};
+
+static struct pmlxzj_commands_t g_pmlxzj_commands[] = {
+    {.name = "info", .handler = pmlxzj_cmd_print_info},
+    {.name = "unlock", .handler = pmlxzj_cmd_unlock_exe},
+    {.name = "audio-dump", .handler = pmlxzj_cmd_extract_audio},
+    {.name = "audio-disable", .handler = pmlxzj_cmd_disable_audio},
+};
+
 int main(int argc, char** argv) {
   FixWindowsUnicodeSupport(&argv);
 
@@ -26,12 +38,12 @@ int main(int argc, char** argv) {
   argv++;
   argc--;
 
-  if (strcmp(command, "audio-dump") == 0) {
-    return pmlxzj_cmd_extract_audio(argc, argv);
-  } else if (strcmp(command, "unlock") == 0) {
-    return pmlxzj_cmd_unlock_exe(argc, argv);
-  } else if (strcmp(command, "info") == 0) {
-    return pmlxzj_cmd_print_info(argc, argv);
+  const size_t command_count = sizeof(g_pmlxzj_commands) / sizeof(g_pmlxzj_commands[0]);
+  for (size_t i = 0; i < command_count; i++) {
+    struct pmlxzj_commands_t* cmd = &g_pmlxzj_commands[i];
+    if (strcmp(command, cmd->name) == 0) {
+      return cmd->handler(argc, argv);
+    }
   }
 
   pmlxzj_usage(argv[0]);

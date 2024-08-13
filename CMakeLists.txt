@@ -22,8 +22,9 @@ add_executable(pmlxzj_unlocker
         pmlxzj.c
         pmlxzj_audio.c
         pmlxzj_frame.c
-        cmd_info.c
+        cmd_disable_audio.c
         cmd_extract_audio.c
+        cmd_info.c
         cmd_unlock_exe.c
 )
 target_compile_definitions(pmlxzj_unlocker PRIVATE PROJECT_VERSION="${pmlxzj_unlocker_ver}")

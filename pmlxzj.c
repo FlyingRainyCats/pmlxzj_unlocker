@@ -115,10 +115,12 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
   fread(&variant_i32, sizeof(variant_i32), 1, f_src);
   if (variant_i32 <= 0) {
     // New format
+    ctx->audio_data_version = PMLXZJ_AUDIO_VERSION_CURRENT;
     ctx->audio_start_offset = (long)-variant_i32;
     ctx->frame_metadata_offset = (long)ctx->footer.offset_data_start + (long)sizeof(variant_i32);
   } else {
     // Legacy format
+    ctx->audio_data_version = PMLXZJ_AUDIO_VERSION_LEGACY;
     ctx->frame_metadata_offset = (long)variant_i32;
     ctx->audio_start_offset = (long)ctx->footer.offset_data_start + (long)sizeof(variant_i32);
   }

@@ -8,6 +8,9 @@
 #define PMLXZJ_AUDIO_TYPE_LOSSY_MP3 (5)
 #define PMLXZJ_AUDIO_TYPE_TRUE_SPEECH (6)
 
+#define PMLXZJ_AUDIO_VERSION_LEGACY (0)
+#define PMLXZJ_AUDIO_VERSION_CURRENT (1)
+
 static inline const char* pmlxzj_get_audio_codec_name(uint32_t audio_codec) {
   switch (audio_codec) {
     case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED:
@@ -124,6 +127,7 @@ typedef struct {
   // Audio frame
   uint32_t audio_segment_count;
   long audio_start_offset;
+  int audio_data_version;
 
   // Audio: MP3
   long audio_mp3_start_offset;
