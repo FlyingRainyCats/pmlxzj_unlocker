@@ -1,5 +1,7 @@
 #include "pmlxzj.h"
+#include "pmlxzj_utils.h"
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +9,53 @@
 
 #define MAX_COMPRESSED_CHUNK_SIZE (0x1E848)
 #define ZLIB_INFLATE_BUFFER_SIZE (1024)
+
+pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
+  FILE* f_src = ctx->file;
+
+  switch (ctx->footer.initial_ui_state.audio_codec) {
+    case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED: {
+      if (ctx->audio_start_offset == 0) {
+        // no audio
+        ctx->audio_segment_count = 0;
+        break;
+      }
+
+      fseek(f_src, ctx->audio_start_offset, SEEK_SET);
+      fread(&ctx->audio_segment_count, sizeof(ctx->audio_segment_count), 1, f_src);
+      break;
+    }
+
+    case PMLXZJ_AUDIO_TYPE_LOSSY_MP3: {
+      assert(sizeof(pmlxzj_wave_format_ex) == 0x12);
+      pmlxzj_wave_format_ex wav_spec;
+      pmlxzj_wave_format_ex mp3_spec;
+      uint32_t unk_audio_prop;
+      uint32_t mp3_chunk_count;
+
+      fseek(f_src, ctx->audio_start_offset, SEEK_SET);
+      fread(&wav_spec, sizeof(wav_spec), 1, f_src);
+      fread(&mp3_spec, sizeof(mp3_spec), 1, f_src);
+      fread(&unk_audio_prop, sizeof(unk_audio_prop), 1, f_src);
+      fread(&mp3_chunk_count, sizeof(mp3_chunk_count), 1, f_src);
+      if (mp3_chunk_count == 0) {
+        break;
+      }
+
+      ctx->audio_segment_count = mp3_chunk_count + 1;
+      ctx->audio_mp3_chunk_offsets = calloc(ctx->audio_segment_count, sizeof(uint32_t));
+      fread(ctx->audio_mp3_chunk_offsets, sizeof(uint32_t), ctx->audio_segment_count, f_src);
+      fread(&ctx->audio_mp3_total_size, sizeof(ctx->audio_mp3_total_size), 1, f_src);
+      assert(ctx->audio_mp3_chunk_offsets[0] == 0);
+      ctx->audio_mp3_chunk_offsets[mp3_chunk_count] = ctx->audio_mp3_total_size;
+
+      ctx->audio_mp3_start_offset = ftell(f_src);
+      break;
+    }
+  }
+
+  return PMLXZJ_OK;
+}
 
 bool inflate_chunk(FILE* output, uint8_t* input, size_t length) {
   z_stream strm = {0};
@@ -47,50 +96,78 @@ bool inflate_chunk(FILE* output, uint8_t* input, size_t length) {
   return ok;
 }
 
-bool pmlxzj_inflate_audio(pmlxzj_state_t* ctx, FILE* f_audio) {
+pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio) {
   if (ctx->audio_start_offset == 0) {
-    fprintf(stderr, "File does not contain audio.\n");
-    return false;
+    fprintf(stderr, "File does not contain audio or not initialized.\n");
+    return PMLXZJ_AUDIO_NOT_PRESENT;
+  }
+
+  pmlxzj_state_e result = PMLXZJ_AUDIO_TYPE_UNSUPPORTED;
+  switch (ctx->footer.initial_ui_state.audio_codec) {
+    case PMLXZJ_AUDIO_TYPE_LOSSY_MP3:
+      result = pmlxzj_audio_dump_mp3(ctx, f_audio);
+      break;
+
+    case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED:
+      result = pmlxzj_audio_dump_compressed_wave(ctx, f_audio);
+      break;
+
+    default:
+      break;
+  }
+
+  if (result != PMLXZJ_OK) {
+    printf("ERROR: failed to inflate audio (%d)\n", result);
+  }
+  return result;
+}
+
+pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_audio) {
+  if (ctx->footer.initial_ui_state.audio_codec != PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED) {
+    return PMLXZJ_AUDIO_INCORRECT_TYPE;
   }
 
   uint8_t* buffer = malloc(MAX_COMPRESSED_CHUNK_SIZE);
   if (buffer == NULL) {
     fprintf(stderr, "Failed to allocate memory for audio buffer\n");
-    return false;
+    return PMLXZJ_GZIP_BUFFER_ALLOC_FAILURE;
   }
 
   FILE* f_src = ctx->file;
   fseek(f_src, ctx->audio_start_offset + 4, SEEK_SET);
   uint32_t len = ctx->audio_segment_count;
-  bool ok = true;
-  for (uint32_t i = 0; ok && i < len; i++) {
+  pmlxzj_state_e result = PMLXZJ_OK;
+  for (uint32_t i = 0; i < len; i++) {
     uint32_t chunk_size = 0;
     fread(&chunk_size, sizeof(chunk_size), 1, f_src);
     if (chunk_size > MAX_COMPRESSED_CHUNK_SIZE) {
       fprintf(stderr, "compressed audio chunk size too large (chunk=%d, offset=%ld)\n", i, ftell(f_src));
-      ok = false;
+      result = PMLXZJ_GZIP_BUFFER_TOO_LARGE;
       break;
     }
     fread(buffer, chunk_size, 1, f_src);
-    ok = inflate_chunk(f_audio, buffer, chunk_size);
+    if (!inflate_chunk(f_audio, buffer, chunk_size)) {
+      result = PMLXZJ_GZIP_INFLATE_FAILURE;
+      break;
+    }
   }
   free(buffer);
-  return ok;
+  return result;
 }
 
-pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
-  // 2: wav
-  if (ctx->footer.initial_ui_state.audio_codec != 2) {
-    return PMLXZJ_AUDIO_TYPE_UNSUPPORTED;
+pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio) {
+  if (ctx->footer.initial_ui_state.audio_codec != PMLXZJ_AUDIO_TYPE_LOSSY_MP3) {
+    return PMLXZJ_AUDIO_INCORRECT_TYPE;
   }
 
-  FILE* f_src = ctx->file;
-  if (ctx->audio_start_offset == 0) {
-    // no audio
-    ctx->audio_segment_count = 0;
-    return PMLXZJ_OK;
+  if (ctx->audio_mp3_chunk_offsets == NULL) {
+    return PMLXZJ_AUDIO_EMPTY_CHUNKS;
   }
-  fseek(f_src, ctx->audio_start_offset, SEEK_SET);
-  fread(&ctx->audio_segment_count, sizeof(ctx->audio_segment_count), 1, f_src);
+
+  long start_offset = ctx->audio_mp3_start_offset + (long)ctx->audio_mp3_chunk_offsets[0];
+  long mp3_len = (long)ctx->audio_mp3_total_size - (long)ctx->audio_mp3_chunk_offsets[0];
+
+  fseek(ctx->file, start_offset, SEEK_SET);
+  pmlxzj_util_copy(f_audio, ctx->file, mp3_len);
   return PMLXZJ_OK;
 }

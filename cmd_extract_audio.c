@@ -29,14 +29,23 @@ int pmlxzj_cmd_extract_audio(int argc, char** argv) {
     return 1;
   }
 
-  printf("data_start_offset = 0x%08x\n", app.footer.offset_data_start);
-  printf("data_audio_offset = 0x%08x (segment.len=%d)\n", (int)app.audio_start_offset, (int)app.audio_segment_count);
-
-  FILE* f_audio = fopen(argv[3], "wb");
+  char* audio_output_path = argv[3];
+  FILE* f_audio = fopen(audio_output_path, "wb");
   if (f_audio == NULL) {
     perror("ERROR: open audio out");
     return 1;
   }
-  pmlxzj_inflate_audio(&app, f_audio);
+
+  status = pmlxzj_audio_dump_to_file(&app, f_audio);
+  if (status == PMLXZJ_OK) {
+    fseek(f_audio, 0, SEEK_END);
+    long audio_len = ftello(f_audio);
+    printf("audio dump ok, len = %ld\n", audio_len);
+  } else {
+    // delete content as the output failed :c
+    f_audio = freopen(audio_output_path, "wb" , f_audio);
+  }
+  fclose(f_audio);
+
   return 0;
 }

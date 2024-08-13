@@ -5,6 +5,8 @@
 
 typedef struct {
   bool verbose;
+  bool print_frames;
+  bool print_indexes;
 } pmlxzj_cmd_print_info_param_t;
 
 pmlxzj_enumerate_state_e enum_frame_print_info(pmlxzj_state_t* app,
@@ -28,13 +30,21 @@ pmlxzj_enumerate_state_e enum_frame_print_info(pmlxzj_state_t* app,
 int pmlxzj_cmd_print_info(int argc, char** argv) {
   pmlxzj_cmd_print_info_param_t param = {0};
   int option = -1;
-  while ((option = getopt(argc, argv, "v")) != -1) {
-    if (option == 'v') {
-      param.verbose = true;
-    } else {
-      fprintf(stderr, "ERROR: unknown option '-%c'\n", optopt);
-      pmlxzj_usage(argv[0]);
-      return 1;
+  while ((option = getopt(argc, argv, "vfi")) != -1) {
+    switch (option) {
+      case 'v':
+        param.verbose = true;
+        break;
+      case 'f':
+        param.print_frames = true;
+        break;
+      case 'i':
+        param.print_indexes = true;
+        break;
+      default:
+        fprintf(stderr, "ERROR: unknown option '-%c'\n", optopt);
+        pmlxzj_usage(argv[0]);
+        return 1;
     }
   }
 
@@ -59,22 +69,39 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
     return 1;
   }
 
-  printf("idx1(len=%d):\n", (int)app.idx1_count);
-  for (size_t i = 0; i < app.idx1_count; i++) {
-    printf("  idx1[%3d]: %11d / 0x%08x\n", (int)i, app.idx1[i], app.idx1[i]);
-  }
-  printf("idx2(len=%d):\n", (int)app.idx2_count);
-  for (size_t i = 0; i < 20; i++) {
-    printf("  idx2[%3d]: %11d / 0x%08x\n", (int)i, app.idx2[i], app.idx2[i]);
+  if (param.print_indexes) {
+    printf("idx1(len=%d):\n", (int)app.idx1_count);
+    for (size_t i = 0; i < app.idx1_count; i++) {
+      printf("  idx1[%3d]: %11d / 0x%08x\n", (int)i, app.idx1[i], app.idx1[i]);
+    }
+    printf("idx2(len=%d):\n", (int)app.idx2_count);
+    for (size_t i = 0; i < 20; i++) {
+      printf("  idx2[%3d]: %11d / 0x%08x\n", (int)i, app.idx2[i], app.idx2[i]);
+    }
   }
 
   printf("offset_data_start: 0x%x\n", app.footer.offset_data_start);
-  printf("frame offset: 0x%lx\n", app.first_frame_offset);
-  printf("audio offset: ");
+  printf("frame:\n");
+  printf("  offset: 0x%lx\n", app.first_frame_offset);
+  printf("  type: %d\n", app.footer.initial_ui_state.image_compress_type);
+
+  printf("audio:\n");
+  printf("  offset: ");
   if (app.audio_start_offset) {
     printf("0x%08lx\n", app.audio_start_offset);
   } else {
     printf("(none)\n");
+  }
+  printf("  codec: %u # %s\n", app.footer.initial_ui_state.audio_codec,
+         pmlxzj_get_audio_codec_name(app.footer.initial_ui_state.audio_codec));
+  if (app.footer.initial_ui_state.audio_codec == PMLXZJ_AUDIO_TYPE_LOSSY_MP3) {
+    printf("    mp3_offset: 0x%08lx\n", app.audio_mp3_start_offset);
+    printf("    mp3_len:    0x%08x\n", app.audio_mp3_total_size);
+    if (param.verbose) {
+      for (uint32_t i = 0; i < app.audio_segment_count; i++) {
+        printf("    mp3_chunk[%04u].len: 0x%08x\n", i, app.audio_mp3_chunk_offsets[i]);
+      }
+    }
   }
 
   printf("encrypt edit_lock nonce: ");
@@ -90,7 +117,9 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
     printf("(unset)\n");
   }
 
-  pmlxzj_enumerate_images(&app, enum_frame_print_info, &param);
+  if (param.print_frames) {
+    pmlxzj_enumerate_images(&app, enum_frame_print_info, &param);
+  }
 
   return 0;
 }

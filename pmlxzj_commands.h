@@ -17,6 +17,8 @@ static inline void pmlxzj_usage(char* argv0) {
   printf("       -P    Password, but read from a text file instead.\n");
   printf("       -v    Verbose logging.\n");
   printf("\n");
-  printf("  %s info [-v] <input>\n", name);
+  printf("  %s info [-v] [-i] [-f] <input>\n", name);
   printf("       -v    Verbose logging.\n");
+  printf("       -i    Print indexes (unknown meaning).\n");
+  printf("       -v    Print frames in the player data.\n");
 }

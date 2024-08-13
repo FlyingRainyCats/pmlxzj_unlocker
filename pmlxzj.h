@@ -6,6 +6,21 @@
 
 // size = 0xB4
 #pragma pack(push, 1)
+#define PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED (2)
+#define PMLXZJ_AUDIO_TYPE_LOSSY_MP3 (5)
+#define PMLXZJ_AUDIO_TYPE_TRUE_SPEECH (6)
+static inline const char* pmlxzj_get_audio_codec_name(uint32_t audio_codec) {
+  switch (audio_codec) {
+    case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED:
+      return "PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED";
+    case PMLXZJ_AUDIO_TYPE_LOSSY_MP3:
+      return "PMLXZJ_AUDIO_TYPE_LOSSY_MP3";
+    case PMLXZJ_AUDIO_TYPE_TRUE_SPEECH:
+      return "PMLXZJ_AUDIO_TYPE_TRUE_SPEECH";
+  }
+  return "UNKNOWN";
+}
+
 typedef struct {
   uint32_t color;
   uint32_t wnd_state;
@@ -22,7 +37,7 @@ typedef struct {
   uint32_t field_30;
   uint32_t field_34;
   char wnd_title[24];
-  uint32_t compress_type;
+  uint32_t image_compress_type;
   uint32_t audio_codec;
   uint32_t field_58;
   uint32_t field_5C;
@@ -74,6 +89,16 @@ typedef struct {
   uint32_t field_20;
   uint32_t field_24;  // some kind of special flag...
 } pmlxzj_config_14d8_t;
+
+typedef struct {
+  uint16_t wFormatTag;
+  uint16_t nChannels;
+  uint32_t nSamplesPerSec;
+  uint32_t nAvgBytesPerSec;
+  uint16_t nBlockAlign;
+  uint16_t wBitsPerSample;
+  uint16_t cbSize;
+} pmlxzj_wave_format_ex;
 #pragma pack(pop)
 
 typedef struct {
@@ -97,6 +122,11 @@ typedef struct {
   // Audio frame
   uint32_t audio_segment_count;
   long audio_start_offset;
+
+  // Audio: MP3
+  long audio_mp3_start_offset;
+  uint32_t* audio_mp3_chunk_offsets;
+  uint32_t audio_mp3_total_size;
 } pmlxzj_state_t;
 
 typedef struct {
@@ -109,12 +139,19 @@ typedef struct {
 typedef enum {
   PMLXZJ_OK = 0,
   PMLXZJ_MAGIC_NOT_MATCH = 1,
+  /** @deprecated */
   PMLXZJ_UNSUPPORTED_MODE_2 = 2,
   PMLXZJ_ALLOCATE_INDEX_LIST_ERROR = 3,
   PMLXZJ_SCAN_U32_ARRAY_ALLOC_ERROR = 4,
   PMLXZJ_AUDIO_OFFSET_UNSUPPORTED = 5,
   PMLXZJ_AUDIO_TYPE_UNSUPPORTED = 6,
   PMLXZJ_PASSWORD_ERROR = 7,
+  PMLXZJ_AUDIO_INCORRECT_TYPE = 8,
+  PMLXZJ_AUDIO_NOT_PRESENT = 9,
+  PMLXZJ_GZIP_BUFFER_ALLOC_FAILURE = 10,
+  PMLXZJ_GZIP_BUFFER_TOO_LARGE = 11,
+  PMLXZJ_GZIP_INFLATE_FAILURE = 12,
+  PMLXZJ_AUDIO_EMPTY_CHUNKS = 13,
 } pmlxzj_state_e;
 
 typedef enum {
@@ -141,12 +178,17 @@ typedef pmlxzj_enumerate_state_e(pmlxzj_enumerate_callback_t)(pmlxzj_state_t* ct
                                                               pmlxzj_frame_info_t* frame,
                                                               void* extra_callback_data);
 
+uint32_t pmlxzj_password_checksum(const char* password);
 pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params);
 pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx);
 pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx);
 pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params);
+
+// Frames / images
 pmlxzj_enumerate_state_e pmlxzj_enumerate_images(pmlxzj_state_t* ctx,
                                                  pmlxzj_enumerate_callback_t* callback,
                                                  void* extra_callback_data);
-bool pmlxzj_inflate_audio(pmlxzj_state_t* ctx, FILE* f_audio);
-uint32_t pmlxzj_password_checksum(const char* password);
+// Audio
+pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio);
+pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio);
+pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_audio);
