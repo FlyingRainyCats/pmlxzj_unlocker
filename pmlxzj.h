@@ -4,11 +4,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// size = 0xB4
-#pragma pack(push, 1)
 #define PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED (2)
 #define PMLXZJ_AUDIO_TYPE_LOSSY_MP3 (5)
 #define PMLXZJ_AUDIO_TYPE_TRUE_SPEECH (6)
+
 static inline const char* pmlxzj_get_audio_codec_name(uint32_t audio_codec) {
   switch (audio_codec) {
     case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED:
@@ -17,10 +16,13 @@ static inline const char* pmlxzj_get_audio_codec_name(uint32_t audio_codec) {
       return "PMLXZJ_AUDIO_TYPE_LOSSY_MP3";
     case PMLXZJ_AUDIO_TYPE_TRUE_SPEECH:
       return "PMLXZJ_AUDIO_TYPE_TRUE_SPEECH";
+    default:
+      return "UNKNOWN";
   }
-  return "UNKNOWN";
 }
 
+#pragma pack(push, 1)
+// size = 0xB4
 typedef struct {
   uint32_t color;
   uint32_t wnd_state;
