@@ -26,6 +26,16 @@ pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
       break;
     }
 
+    case PMLXZJ_AUDIO_TYPE_WAVE_RAW: {
+      if (ctx->audio_start_offset == 0) {
+        break;
+      }
+
+      fseek(f_src, ctx->audio_start_offset, SEEK_SET);
+      fread(&ctx->audio_raw_wave_size, sizeof(ctx->audio_raw_wave_size), 1, f_src);
+      break;
+    }
+
     case PMLXZJ_AUDIO_TYPE_LOSSY_MP3: {
       assert(sizeof(pmlxzj_wave_format_ex) == 0x12);
       pmlxzj_wave_format_ex wav_spec;
@@ -112,6 +122,10 @@ pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio) {
       result = pmlxzj_audio_dump_compressed_wave(ctx, f_audio);
       break;
 
+    case PMLXZJ_AUDIO_TYPE_WAVE_RAW:
+      result = pmlxzj_audio_dump_raw_wave(ctx, f_audio);
+      break;
+
     default:
       break;
   }
@@ -169,5 +183,16 @@ pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio) {
 
   fseek(ctx->file, start_offset, SEEK_SET);
   pmlxzj_util_copy(f_audio, ctx->file, mp3_len);
+  return PMLXZJ_OK;
+}
+
+pmlxzj_state_e pmlxzj_audio_dump_raw_wave(pmlxzj_state_t* ctx, FILE* f_audio) {
+  if (ctx->footer.initial_ui_state.audio_codec != PMLXZJ_AUDIO_TYPE_WAVE_RAW) {
+    return PMLXZJ_AUDIO_INCORRECT_TYPE;
+  }
+
+  FILE* f_src = ctx->file;
+  fseek(f_src, ctx->audio_start_offset + 4, SEEK_SET);
+  pmlxzj_util_copy(f_audio, ctx->file, ctx->audio_raw_wave_size);
   return PMLXZJ_OK;
 }

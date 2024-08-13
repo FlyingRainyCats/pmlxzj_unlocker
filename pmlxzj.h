@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define PMLXZJ_AUDIO_TYPE_WAVE_RAW (1)
 #define PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED (2)
 #define PMLXZJ_AUDIO_TYPE_LOSSY_MP3 (5)
 #define PMLXZJ_AUDIO_TYPE_TRUE_SPEECH (6)
@@ -13,6 +14,8 @@
 
 static inline const char* pmlxzj_get_audio_codec_name(uint32_t audio_codec) {
   switch (audio_codec) {
+    case PMLXZJ_AUDIO_TYPE_WAVE_RAW:
+      return "PMLXZJ_AUDIO_TYPE_WAVE_RAW";
     case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED:
       return "PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED";
     case PMLXZJ_AUDIO_TYPE_LOSSY_MP3:
@@ -124,10 +127,11 @@ typedef struct {
   long first_frame_offset;
   long frame;
 
-  // Audio frame
-  uint32_t audio_segment_count;
-  long audio_start_offset;
+  // Audio metadata
   int audio_data_version;
+  long audio_start_offset;
+  uint32_t audio_segment_count;
+  uint32_t audio_raw_wave_size;
 
   // Audio: MP3
   long audio_mp3_start_offset;
@@ -196,5 +200,7 @@ pmlxzj_enumerate_state_e pmlxzj_enumerate_images(pmlxzj_state_t* ctx,
                                                  void* extra_callback_data);
 // Audio
 pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio);
-pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio);
+
+pmlxzj_state_e pmlxzj_audio_dump_raw_wave(pmlxzj_state_t* ctx, FILE* f_audio);
 pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_audio);
+pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio);

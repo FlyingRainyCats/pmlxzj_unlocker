@@ -71,7 +71,15 @@ cmake --build build
 
 ### 提取音频
 
-目前只支持 `WAV` (压缩) 和 `MP3` 格式音频提取。
+目前只支持下述“声音压缩”选项的 EXE 播放器：
+
+- 不压缩 (WAV)
+- 无损压缩 (WAV + zlib 压缩)
+- 有损压缩 (MP3 格式)
+
+尚未支援：
+
+- 有损压缩 (TrueSpeech)
 
 ```shell
 ./pmlxzj_unlocker.exe audio-dump "录像1.exe" "录像1.wav"
@@ -83,11 +91,11 @@ cmake --build build
 
 为了绕过这一限制，可以使用工具将 EXE 播放器中的音频禁用，然后进行转换。
 
-※ 如果处理《屏幕录像专家》7.0 或之前的版本生成的 EXE 播放器，需要使用《屏幕录像专家》升级播放器然后再处理。
-
 ```shell
 ./pmlxzj_unlocker.exe audio-disable "录像1.exe" "录像1_无音频.exe"
 ```
+
+※ 如果处理《屏幕录像专家》7.0 或之前的版本生成的 EXE 播放器，需要使用《屏幕录像专家》升级播放器然后再处理。
 
 ### 查看信息
 
