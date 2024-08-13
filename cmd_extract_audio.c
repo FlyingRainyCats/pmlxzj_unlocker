@@ -4,12 +4,12 @@
 #include <stdio.h>
 
 int pmlxzj_cmd_extract_audio(int argc, char** argv) {
-  if (argc <= 3) {
+  if (argc <= 2) {
     pmlxzj_usage(argv[0]);
     return 1;
   }
 
-  FILE* f_src = fopen(argv[2], "rb");
+  FILE* f_src = fopen(argv[1], "rb");
   if (f_src == NULL) {
     perror("ERROR: open source input");
     return 1;
@@ -29,7 +29,7 @@ int pmlxzj_cmd_extract_audio(int argc, char** argv) {
     return 1;
   }
 
-  char* audio_output_path = argv[3];
+  char* audio_output_path = argv[2];
   FILE* f_audio = fopen(audio_output_path, "wb");
   if (f_audio == NULL) {
     perror("ERROR: open audio out");

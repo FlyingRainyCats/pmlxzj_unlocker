@@ -13,7 +13,6 @@
 #endif
 
 int main(int argc, char** argv) {
-  optind++;
   FixWindowsUnicodeSupport(&argv);
 
   printf("pmlxzj_unlocker v" PROJECT_VERSION " by 爱飞的猫@52pojie.cn (FlyingRainyCats)\n");
@@ -22,11 +21,16 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  if (_strcmpi(argv[1], "audio-dump") == 0) {
+  char* command = argv[1];
+  argv[1] = argv[0];
+  argv++;
+  argc--;
+
+  if (strcmp(command, "audio-dump") == 0) {
     return pmlxzj_cmd_extract_audio(argc, argv);
-  } else if (_strcmpi(argv[1], "unlock") == 0) {
+  } else if (strcmp(command, "unlock") == 0) {
     return pmlxzj_cmd_unlock_exe(argc, argv);
-  } else if (_strcmpi(argv[1], "info") == 0) {
+  } else if (strcmp(command, "info") == 0) {
     return pmlxzj_cmd_print_info(argc, argv);
   }
 
