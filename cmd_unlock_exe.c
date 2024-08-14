@@ -107,9 +107,14 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
   pmlxzj_param.input_file = f_src;
   pmlxzj_param.resume_on_bad_password = cli_params.resume_on_bad_password;
   memcpy(pmlxzj_param.password, cli_params.password, sizeof(pmlxzj_param.password));
-  pmlxzj_state_e status = pmlxzj_init_all(&app, &pmlxzj_param);
+  pmlxzj_state_e status = pmlxzj_init(&app, &pmlxzj_param);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init failed: %d\n", status);
+    printf("ERROR: Init failed (exe): %d\n", status);
+    return 1;
+  }
+  status = pmlxzj_init_frame(&app);
+  if (status != PMLXZJ_OK) {
+    printf("ERROR: Init failed (frame): %d\n", status);
     return 1;
   }
 

@@ -2,6 +2,7 @@
 
 #include "pmlxzj.h"
 #include "pmlxzj_commands.h"
+#include "pmlxzj_enum_names.h"
 
 typedef struct {
   bool verbose;
@@ -65,7 +66,7 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
   params.input_file = f_src;
   pmlxzj_state_e status = pmlxzj_init_all(&app, &params);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj failed: %d\n", status);
+    printf("ERROR: Init pmlxzj failed: %d (%s)\n", status, pmlxzj_get_state_name(status));
     return 1;
   }
 
@@ -87,16 +88,16 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
 
   printf("audio:\n");
   printf("  offset: ");
-  if (app.audio_start_offset) {
-    printf("0x%08lx\n", app.audio_start_offset);
+  if (app.audio_metadata_offset) {
+    printf("0x%08lx\n", app.audio_metadata_offset);
   } else {
     printf("(none)\n");
   }
   printf("  codec: %u # %s\n", app.footer.initial_ui_state.audio_codec,
          pmlxzj_get_audio_codec_name(app.footer.initial_ui_state.audio_codec));
   if (app.footer.initial_ui_state.audio_codec == PMLXZJ_AUDIO_TYPE_LOSSY_MP3) {
-    printf("    mp3_offset: 0x%08lx\n", app.audio_mp3_start_offset);
-    printf("    mp3_len:    0x%08x\n", app.audio_mp3_total_size);
+    printf("    mp3_offset: 0x%08lx\n", app.audio_stream_offset);
+    printf("    mp3_len:    0x%08x\n", app.audio_stream_size);
     if (param.verbose) {
       for (uint32_t i = 0; i < app.audio_segment_count; i++) {
         printf("    mp3_chunk[%04u].len: 0x%08x\n", i, app.audio_mp3_chunk_offsets[i]);

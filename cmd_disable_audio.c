@@ -26,7 +26,7 @@ int pmlxzj_cmd_disable_audio(int argc, char** argv) {
     return 1;
   }
 
-  if (app.audio_data_version == PMLXZJ_AUDIO_VERSION_LEGACY) {
+  if (app.audio_metadata_version == PMLXZJ_AUDIO_VERSION_LEGACY) {
     printf("ERROR: exe player upgrade required.\n");
     return 1;
   }

@@ -4,28 +4,18 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define PMLXZJ_AUDIO_TYPE_WAVE_RAW (1)
-#define PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED (2)
-#define PMLXZJ_AUDIO_TYPE_LOSSY_MP3 (5)
-#define PMLXZJ_AUDIO_TYPE_TRUE_SPEECH (6)
+typedef enum {
+  PMLXZJ_AUDIO_TYPE_WAVE_RAW = 1,
+  PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED = 2,
+  PMLXZJ_AUDIO_TYPE_LOSSY_MP3 = 5,
+  PMLXZJ_AUDIO_TYPE_LOSSY_TRUE_SPEECH = 6,
+  PMLXZJ_AUDIO_TYPE_LOSSY_AAC = 7,
+} pmlxzj_audio_codec_e;
 
-#define PMLXZJ_AUDIO_VERSION_LEGACY (0)
-#define PMLXZJ_AUDIO_VERSION_CURRENT (1)
-
-static inline const char* pmlxzj_get_audio_codec_name(uint32_t audio_codec) {
-  switch (audio_codec) {
-    case PMLXZJ_AUDIO_TYPE_WAVE_RAW:
-      return "PMLXZJ_AUDIO_TYPE_WAVE_RAW";
-    case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED:
-      return "PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED";
-    case PMLXZJ_AUDIO_TYPE_LOSSY_MP3:
-      return "PMLXZJ_AUDIO_TYPE_LOSSY_MP3";
-    case PMLXZJ_AUDIO_TYPE_TRUE_SPEECH:
-      return "PMLXZJ_AUDIO_TYPE_TRUE_SPEECH";
-    default:
-      return "UNKNOWN";
-  }
-}
+typedef enum {
+  PMLXZJ_AUDIO_VERSION_LEGACY = 0,
+  PMLXZJ_AUDIO_VERSION_CURRENT = 1,
+} pmlxzj_audio_version;
 
 #pragma pack(push, 1)
 // size = 0xB4
@@ -128,15 +118,15 @@ typedef struct {
   long frame;
 
   // Audio metadata
-  int audio_data_version;
-  long audio_start_offset;
-  uint32_t audio_segment_count;
-  uint32_t audio_raw_wave_size;
+  int audio_metadata_version;
+  long audio_metadata_offset;
+
+  uint32_t audio_segment_count;  // N/A for some codec
+  long audio_stream_offset;      // N/A for some codec
+  uint32_t audio_stream_size;    // N/A for some codec
 
   // Audio: MP3
-  long audio_mp3_start_offset;
   uint32_t* audio_mp3_chunk_offsets;
-  uint32_t audio_mp3_total_size;
 } pmlxzj_state_t;
 
 typedef struct {
@@ -161,7 +151,7 @@ typedef enum {
   PMLXZJ_GZIP_BUFFER_ALLOC_FAILURE = 10,
   PMLXZJ_GZIP_BUFFER_TOO_LARGE = 11,
   PMLXZJ_GZIP_INFLATE_FAILURE = 12,
-  PMLXZJ_AUDIO_EMPTY_CHUNKS = 13,
+  PMLXZJ_NO_AUDIO = 13,
 } pmlxzj_state_e;
 
 typedef enum {
@@ -204,3 +194,4 @@ pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio);
 pmlxzj_state_e pmlxzj_audio_dump_raw_wave(pmlxzj_state_t* ctx, FILE* f_audio);
 pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_audio);
 pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio);
+pmlxzj_state_e pmlxzj_audio_dump_aac(pmlxzj_state_t* ctx, FILE* f_audio);
