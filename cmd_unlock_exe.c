@@ -1,6 +1,7 @@
 #include "pmlxzj.h"
 #include "pmlxzj_commands.h"
 #include "pmlxzj_utils.h"
+#include "pmlxzj_enum_names.h"
 
 #include <memory.h>
 #include <stddef.h>
@@ -109,12 +110,12 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
   memcpy(pmlxzj_param.password, cli_params.password, sizeof(pmlxzj_param.password));
   pmlxzj_state_e status = pmlxzj_init(&app, &pmlxzj_param);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init failed (exe): %d\n", status);
+    printf("ERROR: Init failed (exe): %d (%s)\n", status, pmlxzj_get_state_name(status));
     return 1;
   }
   status = pmlxzj_init_frame(&app);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init failed (frame): %d\n", status);
+    printf("ERROR: Init failed (frame): %d (%s)\n", status, pmlxzj_get_state_name(status));
     return 1;
   }
 

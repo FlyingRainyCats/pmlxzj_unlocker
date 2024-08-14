@@ -1,5 +1,6 @@
 #include "pmlxzj.h"
 #include "pmlxzj_commands.h"
+#include "pmlxzj_enum_names.h"
 
 #include <stdio.h>
 
@@ -20,12 +21,12 @@ int pmlxzj_cmd_extract_audio(int argc, char** argv) {
   params.input_file = f_src;
   pmlxzj_state_e status = pmlxzj_init(&app, &params);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj exe failed: %d\n", status);
+    printf("ERROR: Init pmlxzj exe failed: %d (%s)\n", status, pmlxzj_get_state_name(status));
     return 1;
   }
   status = pmlxzj_init_audio(&app);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj audio failed: %d\n", status);
+    printf("ERROR: Init pmlxzj audio failed: %d (%s)\n", status, pmlxzj_get_state_name(status));
     return 1;
   }
 
@@ -42,8 +43,7 @@ int pmlxzj_cmd_extract_audio(int argc, char** argv) {
     long audio_len = ftello(f_audio);
     printf("audio dump ok, len = %ld\n", audio_len);
   } else {
-    // delete content as the output failed :c
-    f_audio = freopen(audio_output_path, "wb" , f_audio);
+    printf("ERROR: failed to dump: %d (%s)\n", status, pmlxzj_get_state_name(status));
   }
   fclose(f_audio);
   fclose(f_src);

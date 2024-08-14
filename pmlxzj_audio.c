@@ -1,4 +1,5 @@
 #include "pmlxzj.h"
+#include "pmlxzj_enum_names.h"
 #include "pmlxzj_utils.h"
 
 #include <assert.h>
@@ -138,7 +139,7 @@ pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio) {
   }
 
   if (result != PMLXZJ_OK) {
-    printf("ERROR: failed to inflate audio (%d)\n", result);
+    printf("ERROR: %s: failed to inflate audio: %d (%s)", __func__, result, pmlxzj_get_state_name(result));
   }
   return result;
 }
@@ -196,11 +197,8 @@ pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio) {
     return PMLXZJ_NO_AUDIO;
   }
 
-  long start_offset = ctx->audio_stream_offset + (long)ctx->audio_mp3_chunk_offsets[0];
-  long mp3_len = (long)ctx->audio_stream_size - (long)ctx->audio_mp3_chunk_offsets[0];
-
-  fseek(ctx->file, start_offset, SEEK_SET);
-  pmlxzj_util_copy(f_audio, ctx->file, mp3_len);
+  fseek(ctx->file, ctx->audio_stream_offset, SEEK_SET);
+  pmlxzj_util_copy(f_audio, ctx->file, ctx->audio_stream_size);
   return PMLXZJ_OK;
 }
 

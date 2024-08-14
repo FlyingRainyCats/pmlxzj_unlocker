@@ -1,4 +1,6 @@
 #include "pmlxzj.h"
+#include "pmlxzj_enum_names.h"
+
 #include <memory.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,17 +143,14 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
 pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
   pmlxzj_state_e status = pmlxzj_init(ctx, params);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj exe failed: %d\n", status);
     return status;
   }
   status = pmlxzj_init_audio(ctx);
-  if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj (audio) failed: %d\n", status);
+  if (status != PMLXZJ_OK && status != PMLXZJ_NO_AUDIO) {
     return status;
   }
   status = pmlxzj_init_frame(ctx);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj (frame) failed: %d\n", status);
     return status;
   }
 
