@@ -120,6 +120,7 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
   if (param.print_frames) {
     pmlxzj_enumerate_images(&app, enum_frame_print_info, &param);
   }
+  fclose(f_src);
 
   return 0;
 }

@@ -128,5 +128,8 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
     printf("error: edit_lock_nonce is zero. Unsupported cipher or not encrypted.\n");
   }
 
+  fclose(f_src);
+  fclose(f_dst);
+
   return 0;
 }

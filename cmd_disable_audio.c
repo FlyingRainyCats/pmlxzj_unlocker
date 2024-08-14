@@ -50,8 +50,6 @@ int pmlxzj_cmd_disable_audio(int argc, char** argv) {
   fseek(f_dst, app.file_size - (long)(sizeof(pmlxzj_footer_t)), SEEK_SET);
   fwrite(&footer, sizeof(footer), 1, f_dst);
 
-
-
   fclose(f_dst);
   fclose(f_src);
 

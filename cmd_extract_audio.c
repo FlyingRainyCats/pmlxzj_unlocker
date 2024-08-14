@@ -46,6 +46,7 @@ int pmlxzj_cmd_extract_audio(int argc, char** argv) {
     f_audio = freopen(audio_output_path, "wb" , f_audio);
   }
   fclose(f_audio);
+  fclose(f_src);
 
   return 0;
 }
