@@ -10,7 +10,7 @@
 #include <zlib.h>
 
 #define MAX_COMPRESSED_CHUNK_SIZE (0x1E848)
-#define ZLIB_INFLATE_BUFFER_SIZE (1024)
+#define ZLIB_INFLATE_BUFFER_SIZE (4096)
 
 pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
   if (ctx->audio_metadata_offset == 0) {
@@ -61,9 +61,40 @@ pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
     }
 
     case PMLXZJ_AUDIO_TYPE_LOSSY_AAC: {
-      fseek(f_src, ctx->audio_metadata_offset + 0x12 + 4, SEEK_SET);
-      pmlxzj_skip_lpe_data(f_src);
-      pmlxzj_skip_lpe_data(f_src);
+      fseek(f_src, ctx->audio_metadata_offset, SEEK_SET);
+
+      pmlxzj_wave_format_ex wav_spec;
+      uint32_t unused_field_80;
+
+      fread(&wav_spec, sizeof(wav_spec), 1, f_src);
+      fread(&unused_field_80, sizeof(unused_field_80), 1, f_src);
+
+      uint32_t decoder_info_len;
+      fread(&decoder_info_len, sizeof(decoder_info_len), 1, f_src);
+      if (decoder_info_len > sizeof(ctx->audio_aac_decoder_data)) {
+        return PMLXZJ_AUDIO_AAC_INVALID_DECODER_SPECIFIC_INFO;
+      }
+      fread(&ctx->audio_aac_decoder_data, decoder_info_len, 1, f_src);
+      pmlxzj_state_e state =
+          pmlxzj_aac_parse_decoder_specific_info(&ctx->audio_aac_config, ctx->audio_aac_decoder_data, decoder_info_len);
+      if (state != PMLXZJ_OK) {
+        return state;
+      }
+
+      uint32_t segment_count_in_bytes;
+      fread(&segment_count_in_bytes, sizeof(segment_count_in_bytes), 1, f_src);
+      ctx->audio_aac_chunk_sizes = malloc(segment_count_in_bytes);
+      ctx->audio_segment_count = segment_count_in_bytes / sizeof(uint32_t);
+      fread(ctx->audio_aac_chunk_sizes, 1, segment_count_in_bytes, f_src);
+
+      for (uint32_t i = 0; i < ctx->audio_segment_count; i++) {
+        if (ctx->audio_aac_chunk_sizes[i] > PMLXZJ_AAC_MAX_FRAME_DATA_LEN) {
+          free(ctx->audio_aac_chunk_sizes);
+          ctx->audio_aac_chunk_sizes = NULL;
+          return PMLXZJ_AUDIO_AAC_INVALID_FRAME_SIZE;
+        }
+      }
+
       fread(&ctx->audio_stream_size, sizeof(ctx->audio_stream_size), 1, f_src);
       ctx->audio_stream_offset = ftell(f_src);
     }
@@ -161,12 +192,7 @@ pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_au
     return PMLXZJ_AUDIO_INCORRECT_TYPE;
   }
 
-  uint8_t* buffer = malloc(MAX_COMPRESSED_CHUNK_SIZE);
-  if (buffer == NULL) {
-    fprintf(stderr, "Failed to allocate memory for audio buffer\n");
-    return PMLXZJ_GZIP_BUFFER_ALLOC_FAILURE;
-  }
-
+  uint8_t buffer[MAX_COMPRESSED_CHUNK_SIZE] = {0};
   FILE* f_src = ctx->file;
   fseek(f_src, ctx->audio_stream_offset, SEEK_SET);
   uint32_t len = ctx->audio_segment_count;
@@ -185,7 +211,6 @@ pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_au
       break;
     }
   }
-  free(buffer);
   return result;
 }
 
@@ -209,31 +234,20 @@ pmlxzj_state_e pmlxzj_audio_dump_aac(pmlxzj_state_t* ctx, FILE* f_audio) {
   }
 
   fseek(ctx->file, ctx->audio_stream_offset, SEEK_SET);
-  size_t len = ctx->audio_stream_size;
-  pmlxzj_aac_audio_config_t config;
-  pmlxzj_state_e state = pmlxzj_aac_parse_decoder_specific_info(&config, (const uint8_t*)"\x15\x08", 2);
-  if (state != PMLXZJ_OK) {
-    return state;
-  }
-  uint8_t adts_header[PMLXZJ_AAC_ADTS_HEADER_LEN] = {0};
-  uint8_t audio_buffer[PMLXZJ_AAC_FRAME_DATA_LEN] = {0};
-  size_t last_read = 0;
-  while(len != 0) {
-    const size_t to_read = PMLXZJ_MIN(PMLXZJ_AAC_FRAME_DATA_LEN, len);
-    size_t bytes_read = fread(audio_buffer, 1, to_read, ctx->file);
-    if (bytes_read == 0) {
-      break;
-    }
-    len -= bytes_read;
+  uint8_t buffer[PMLXZJ_AAC_ADTS_HEADER_LEN + PMLXZJ_AAC_MAX_FRAME_DATA_LEN] = {0};
+  for (uint32_t i = 0; i < ctx->audio_segment_count; i++) {
+    uint32_t chunk_size = ctx->audio_aac_chunk_sizes[i];
+    assert(chunk_size < PMLXZJ_AAC_MAX_FRAME_DATA_LEN);
 
-    // update header if we had a different number of bytes read.
-    if (last_read != bytes_read) {
-      pmlxzj_aac_adts_header(adts_header, &config, (uint16_t)bytes_read);
-      last_read = bytes_read;
-    }
-    fwrite(adts_header, 1, PMLXZJ_AAC_ADTS_HEADER_LEN, f_audio);
-    fwrite(audio_buffer, 1, bytes_read, f_audio);
+    size_t header_len = pmlxzj_aac_adts_header(buffer, &ctx->audio_aac_config, chunk_size);
+    assert(header_len == PMLXZJ_AAC_ADTS_HEADER_LEN);
+
+    size_t bytes_read = fread(&buffer[header_len], 1, chunk_size, ctx->file);
+    assert(bytes_read == chunk_size);
+
+    fwrite(buffer, 1, header_len + bytes_read, f_audio);
   }
+  assert(ftell(ctx->file) == (long)(ctx->audio_stream_offset + ctx->audio_stream_size));
 
   return PMLXZJ_OK;
 }

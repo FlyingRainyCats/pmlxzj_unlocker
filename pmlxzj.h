@@ -100,6 +100,12 @@ typedef struct {
 #pragma pack(pop)
 
 typedef struct {
+  uint8_t profile;
+  uint8_t sample_rate_idx;
+  uint8_t channels_idx;
+} pmlxzj_aac_audio_config_t;
+
+typedef struct {
   FILE* file;
 
   long file_size;
@@ -127,6 +133,11 @@ typedef struct {
 
   // Audio: MP3
   uint32_t* audio_mp3_chunk_offsets;
+
+  // Audio: AAC
+  uint8_t audio_aac_decoder_data[4];
+  uint32_t* audio_aac_chunk_sizes;
+  pmlxzj_aac_audio_config_t audio_aac_config;
 } pmlxzj_state_t;
 
 typedef struct {
