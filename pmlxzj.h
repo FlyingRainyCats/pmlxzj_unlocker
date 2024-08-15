@@ -63,7 +63,7 @@ typedef struct {
 } pmlxzj_initial_ui_state_t;
 
 typedef struct {
-  pmlxzj_initial_ui_state_t initial_ui_state;
+  pmlxzj_initial_ui_state_t config;
   uint32_t edit_lock_nonce;
   uint32_t play_lock_password_checksum;
   uint32_t key_3;
@@ -100,10 +100,38 @@ typedef struct {
 #pragma pack(pop)
 
 typedef struct {
-  uint8_t profile;
-  uint8_t sample_rate_idx;
-  uint8_t channels_idx;
+  uint8_t profile_id;
+  uint8_t sample_rate_id;
+  uint8_t channels_id;
 } pmlxzj_aac_audio_config_t;
+
+typedef struct {
+  long offset;
+  uint32_t size;
+  uint32_t segment_count;
+
+  // decoder specific data
+  uint8_t format[4];
+  uint32_t* segment_sizes;
+  pmlxzj_aac_audio_config_t config;
+} pmlxzj_audio_aac_t;
+
+typedef struct {
+  long offset;
+  uint32_t size;
+} pmlxzj_audio_wav_t;
+
+typedef struct {
+  long offset;
+  uint32_t segment_count;
+} pmlxzj_audio_wav_zlib_t;
+
+typedef struct {
+  long offset;
+  uint32_t size;
+  uint32_t segment_count;
+  uint32_t* offsets;
+} pmlxzj_audio_mp3_t;
 
 typedef struct {
   FILE* file;
@@ -127,17 +155,12 @@ typedef struct {
   int audio_metadata_version;
   long audio_metadata_offset;
 
-  uint32_t audio_segment_count;  // N/A for some codec
-  long audio_stream_offset;      // N/A for some codec
-  uint32_t audio_stream_size;    // N/A for some codec
-
-  // Audio: MP3
-  uint32_t* audio_mp3_chunk_offsets;
-
-  // Audio: AAC
-  uint8_t audio_aac_decoder_data[4];
-  uint32_t* audio_aac_chunk_sizes;
-  pmlxzj_aac_audio_config_t audio_aac_config;
+  union  {
+    pmlxzj_audio_mp3_t mp3;
+    pmlxzj_audio_wav_t wav;
+    pmlxzj_audio_wav_zlib_t wav_zlib;
+    pmlxzj_audio_aac_t aac;
+  } audio;
 } pmlxzj_state_t;
 
 typedef struct {

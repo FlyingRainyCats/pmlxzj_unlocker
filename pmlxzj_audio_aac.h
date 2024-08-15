@@ -5,9 +5,31 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define PMLXZJ_COUNT_OF(arr) (sizeof(arr) / sizeof(arr[0]))
 #define PMLXZJ_AAC_ADTS_HEADER_LEN (7)
 #define PMLXZJ_AAC_MASK_BY_BITS(val, n) ((val) & ((1 << n) - 1))
 #define PMLXZJ_AAC_MAX_FRAME_DATA_LEN ((1 << 13) - 1 - PMLXZJ_AAC_ADTS_HEADER_LEN)
+
+inline static const char* pmlxzj_adts_get_profile_name(uint8_t profile) {
+  static const char* names[4] = {"aac-main", "aac-lc", "aac-ssr", "aac-he?"};
+  if (profile < PMLXZJ_COUNT_OF(names)) {
+    return names[profile];
+  }
+  return "unknown";
+}
+
+inline static uint32_t pmlxzj_adts_get_sample_rate(uint8_t sample_rate_idx) {
+  static const uint32_t sample_rates[] = {
+      96000, 88200, 64000, 48000, 44100, 32000,
+      24000, 22050, 16000, 12000, 11025, 8000
+  };
+
+  if (sample_rate_idx <  PMLXZJ_COUNT_OF(sample_rates)) {
+    return sample_rates[sample_rate_idx];
+  }
+
+  return 0;
+}
 
 inline static uint8_t pmlxzj_aac_map_profile_to_adts(uint8_t profile) {
   switch (profile) {
@@ -45,9 +67,9 @@ inline static pmlxzj_state_e pmlxzj_aac_parse_decoder_specific_info(pmlxzj_aac_a
     return PMLXZJ_AUDIO_AAC_DECODER_UNSUPPORTED_SAMPLE_RATE;
   }
 
-  result->profile = pmlxzj_aac_map_profile_to_adts(profile);
-  result->sample_rate_idx = sample_rate;
-  result->channels_idx = channels;
+  result->profile_id = pmlxzj_aac_map_profile_to_adts(profile);
+  result->sample_rate_id = sample_rate;
+  result->channels_id = channels;
   return PMLXZJ_OK;
 }
 
@@ -65,10 +87,10 @@ inline static size_t pmlxzj_aac_adts_header(uint8_t* header,
   const uint8_t protection_absence = PMLXZJ_AAC_MASK_BY_BITS(1, 1);  // 1-bit
   header[1] = 0xf0 | (mpeg_version << 3) | (layer << 1) | protection_absence;
 
-  const uint8_t profile = config->profile;                                                     // 2-bits
-  const uint8_t sample_rate_idx_mapped = PMLXZJ_AAC_MASK_BY_BITS(config->sample_rate_idx, 4);  // 4-bits
+  const uint8_t profile = config->profile_id;                                                     // 2-bits
+  const uint8_t sample_rate_idx_mapped = PMLXZJ_AAC_MASK_BY_BITS(config->sample_rate_id, 4);  // 4-bits
   const uint8_t private_bit = 0;                                                               // 1-bit
-  const uint8_t channels_idx = PMLXZJ_AAC_MASK_BY_BITS(config->channels_idx, 3);               // 3-bits (1 + 2)
+  const uint8_t channels_idx = PMLXZJ_AAC_MASK_BY_BITS(config->channels_id, 3);               // 3-bits (1 + 2)
   header[2] = (profile << 6) | (sample_rate_idx_mapped << 2) | (private_bit << 1) | (channels_idx >> 2);
 
   // channel (2-bits)

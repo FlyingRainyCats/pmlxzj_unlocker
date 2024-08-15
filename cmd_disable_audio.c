@@ -46,7 +46,7 @@ int pmlxzj_cmd_disable_audio(int argc, char** argv) {
 
   pmlxzj_footer_t footer = {0};
   memcpy(&footer, &app.footer, sizeof(footer));
-  footer.initial_ui_state.audio_codec = PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED;
+  footer.config.audio_codec = PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED;
   fseek(f_dst, app.file_size - (long)(sizeof(pmlxzj_footer_t)), SEEK_SET);
   fwrite(&footer, sizeof(footer), 1, f_dst);
 

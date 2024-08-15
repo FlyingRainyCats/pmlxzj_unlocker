@@ -19,22 +19,28 @@ pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
   }
 
   FILE* f_src = ctx->file;
-  switch (ctx->footer.initial_ui_state.audio_codec) {
+  switch (ctx->footer.config.audio_codec) {
     case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED: {
+      pmlxzj_audio_wav_zlib_t* audio = &ctx->audio.wav_zlib;
+
       fseek(f_src, ctx->audio_metadata_offset, SEEK_SET);
-      fread(&ctx->audio_segment_count, sizeof(ctx->audio_segment_count), 1, f_src);
-      ctx->audio_stream_offset = ftell(f_src);
+      fread(&audio->segment_count, sizeof(audio->segment_count), 1, f_src);
+      audio->offset = ftell(f_src);
       break;
     }
 
     case PMLXZJ_AUDIO_TYPE_WAVE_RAW: {
+      pmlxzj_audio_wav_t* audio = &ctx->audio.wav;
+
       fseek(f_src, ctx->audio_metadata_offset, SEEK_SET);
-      fread(&ctx->audio_stream_size, sizeof(ctx->audio_stream_size), 1, f_src);
-      ctx->audio_stream_offset = ftell(f_src);
+      fread(&audio->size, sizeof(audio->size), 1, f_src);
+      audio->offset = ftell(f_src);
       break;
     }
 
     case PMLXZJ_AUDIO_TYPE_LOSSY_MP3: {
+      pmlxzj_audio_mp3_t* audio = &ctx->audio.mp3;
+
       assert(sizeof(pmlxzj_wave_format_ex) == 0x12);
       pmlxzj_wave_format_ex wav_spec;
       pmlxzj_wave_format_ex mp3_spec;
@@ -50,17 +56,19 @@ pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
         break;
       }
 
-      ctx->audio_segment_count = mp3_chunk_count + 1;
-      ctx->audio_mp3_chunk_offsets = calloc(ctx->audio_segment_count, sizeof(uint32_t));
-      fread(ctx->audio_mp3_chunk_offsets, sizeof(uint32_t), ctx->audio_segment_count, f_src);
-      fread(&ctx->audio_stream_size, sizeof(ctx->audio_stream_size), 1, f_src);
-      assert(ctx->audio_mp3_chunk_offsets[0] == 0);
-      ctx->audio_mp3_chunk_offsets[mp3_chunk_count] = ctx->audio_stream_size;
-      ctx->audio_stream_offset = ftell(f_src);
+      audio->segment_count = mp3_chunk_count + 1;
+      audio->offsets = calloc(audio->segment_count, sizeof(uint32_t));
+      fread(audio->offsets, sizeof(uint32_t), audio->segment_count, f_src);
+      fread(&audio->size, sizeof(audio->size), 1, f_src);
+      assert(audio->offsets[0] == 0);
+      audio->offsets[mp3_chunk_count] = audio->size;
+      audio->offset = ftell(f_src);
       break;
     }
 
     case PMLXZJ_AUDIO_TYPE_LOSSY_AAC: {
+      pmlxzj_audio_aac_t* audio = &ctx->audio.aac;
+
       fseek(f_src, ctx->audio_metadata_offset, SEEK_SET);
 
       pmlxzj_wave_format_ex wav_spec;
@@ -69,34 +77,33 @@ pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
       fread(&wav_spec, sizeof(wav_spec), 1, f_src);
       fread(&unused_field_80, sizeof(unused_field_80), 1, f_src);
 
-      uint32_t decoder_info_len;
-      fread(&decoder_info_len, sizeof(decoder_info_len), 1, f_src);
-      if (decoder_info_len > sizeof(ctx->audio_aac_decoder_data)) {
+      uint32_t format_len;
+      fread(&format_len, sizeof(format_len), 1, f_src);
+      if (format_len > sizeof(audio->format)) {
         return PMLXZJ_AUDIO_AAC_INVALID_DECODER_SPECIFIC_INFO;
       }
-      fread(&ctx->audio_aac_decoder_data, decoder_info_len, 1, f_src);
-      pmlxzj_state_e state =
-          pmlxzj_aac_parse_decoder_specific_info(&ctx->audio_aac_config, ctx->audio_aac_decoder_data, decoder_info_len);
+      fread(&audio->format, format_len, 1, f_src);
+      pmlxzj_state_e state = pmlxzj_aac_parse_decoder_specific_info(&audio->config, audio->format, format_len);
       if (state != PMLXZJ_OK) {
         return state;
       }
 
       uint32_t segment_count_in_bytes;
       fread(&segment_count_in_bytes, sizeof(segment_count_in_bytes), 1, f_src);
-      ctx->audio_aac_chunk_sizes = malloc(segment_count_in_bytes);
-      ctx->audio_segment_count = segment_count_in_bytes / sizeof(uint32_t);
-      fread(ctx->audio_aac_chunk_sizes, 1, segment_count_in_bytes, f_src);
+      audio->segment_sizes = malloc(segment_count_in_bytes);
+      audio->segment_count = segment_count_in_bytes / sizeof(uint32_t);
+      fread(audio->segment_sizes, 1, segment_count_in_bytes, f_src);
 
-      for (uint32_t i = 0; i < ctx->audio_segment_count; i++) {
-        if (ctx->audio_aac_chunk_sizes[i] > PMLXZJ_AAC_MAX_FRAME_DATA_LEN) {
-          free(ctx->audio_aac_chunk_sizes);
-          ctx->audio_aac_chunk_sizes = NULL;
+      for (uint32_t i = 0; i < audio->segment_count; i++) {
+        if (audio->segment_sizes[i] > PMLXZJ_AAC_MAX_FRAME_DATA_LEN) {
+          free(audio->segment_sizes);
+          audio->segment_sizes = NULL;
           return PMLXZJ_AUDIO_AAC_INVALID_FRAME_SIZE;
         }
       }
 
-      fread(&ctx->audio_stream_size, sizeof(ctx->audio_stream_size), 1, f_src);
-      ctx->audio_stream_offset = ftell(f_src);
+      fread(&audio->size, sizeof(audio->size), 1, f_src);
+      audio->offset = ftell(f_src);
     }
   }
 
@@ -149,7 +156,7 @@ pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio) {
   }
 
   pmlxzj_state_e result = PMLXZJ_AUDIO_TYPE_UNSUPPORTED;
-  switch (ctx->footer.initial_ui_state.audio_codec) {
+  switch (ctx->footer.config.audio_codec) {
     case PMLXZJ_AUDIO_TYPE_LOSSY_MP3:
       result = pmlxzj_audio_dump_mp3(ctx, f_audio);
       break;
@@ -177,26 +184,31 @@ pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio) {
 }
 
 pmlxzj_state_e pmlxzj_audio_dump_raw_wave(pmlxzj_state_t* ctx, FILE* f_audio) {
-  if (ctx->footer.initial_ui_state.audio_codec != PMLXZJ_AUDIO_TYPE_WAVE_RAW) {
+  if (ctx->footer.config.audio_codec != PMLXZJ_AUDIO_TYPE_WAVE_RAW) {
     return PMLXZJ_AUDIO_INCORRECT_TYPE;
   }
 
+  pmlxzj_audio_wav_t* audio = &ctx->audio.wav;
+
   FILE* f_src = ctx->file;
-  fseek(f_src, ctx->audio_stream_offset, SEEK_SET);
-  pmlxzj_util_copy(f_audio, ctx->file, ctx->audio_stream_size);
+  fseek(f_src, audio->offset, SEEK_SET);
+  pmlxzj_util_copy(f_audio, ctx->file, audio->size);
   return PMLXZJ_OK;
 }
 
 pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_audio) {
-  if (ctx->footer.initial_ui_state.audio_codec != PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED) {
+  if (ctx->footer.config.audio_codec != PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED) {
     return PMLXZJ_AUDIO_INCORRECT_TYPE;
   }
 
-  uint8_t buffer[MAX_COMPRESSED_CHUNK_SIZE] = {0};
+  pmlxzj_audio_wav_zlib_t* audio = &ctx->audio.wav_zlib;
+
   FILE* f_src = ctx->file;
-  fseek(f_src, ctx->audio_stream_offset, SEEK_SET);
-  uint32_t len = ctx->audio_segment_count;
+  uint32_t len = audio->segment_count;
+  fseek(f_src, audio->offset, SEEK_SET);
+
   pmlxzj_state_e result = PMLXZJ_OK;
+  uint8_t buffer[MAX_COMPRESSED_CHUNK_SIZE] = {0};
   for (uint32_t i = 0; i < len; i++) {
     uint32_t chunk_size = 0;
     fread(&chunk_size, sizeof(chunk_size), 1, f_src);
@@ -215,31 +227,32 @@ pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_au
 }
 
 pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio) {
-  if (ctx->footer.initial_ui_state.audio_codec != PMLXZJ_AUDIO_TYPE_LOSSY_MP3) {
+  if (ctx->footer.config.audio_codec != PMLXZJ_AUDIO_TYPE_LOSSY_MP3) {
     return PMLXZJ_AUDIO_INCORRECT_TYPE;
   }
 
-  if (ctx->audio_mp3_chunk_offsets == NULL) {
-    return PMLXZJ_NO_AUDIO;
-  }
+  pmlxzj_audio_mp3_t* audio = &ctx->audio.mp3;
 
-  fseek(ctx->file, ctx->audio_stream_offset, SEEK_SET);
-  pmlxzj_util_copy(f_audio, ctx->file, ctx->audio_stream_size);
+  fseek(ctx->file, audio->offset, SEEK_SET);
+  pmlxzj_util_copy(f_audio, ctx->file, audio->size);
   return PMLXZJ_OK;
 }
 
 pmlxzj_state_e pmlxzj_audio_dump_aac(pmlxzj_state_t* ctx, FILE* f_audio) {
-  if (ctx->footer.initial_ui_state.audio_codec != PMLXZJ_AUDIO_TYPE_LOSSY_AAC) {
+  if (ctx->footer.config.audio_codec != PMLXZJ_AUDIO_TYPE_LOSSY_AAC) {
     return PMLXZJ_AUDIO_INCORRECT_TYPE;
   }
 
-  fseek(ctx->file, ctx->audio_stream_offset, SEEK_SET);
+  pmlxzj_audio_aac_t* audio = &ctx->audio.aac;
+  fseek(ctx->file, audio->offset, SEEK_SET);
   uint8_t buffer[PMLXZJ_AAC_ADTS_HEADER_LEN + PMLXZJ_AAC_MAX_FRAME_DATA_LEN] = {0};
-  for (uint32_t i = 0; i < ctx->audio_segment_count; i++) {
-    uint32_t chunk_size = ctx->audio_aac_chunk_sizes[i];
+
+  uint32_t n = audio->segment_count;
+  for (uint32_t i = 0; i < n; i++) {
+    uint32_t chunk_size = audio->segment_sizes[i];
     assert(chunk_size < PMLXZJ_AAC_MAX_FRAME_DATA_LEN);
 
-    size_t header_len = pmlxzj_aac_adts_header(buffer, &ctx->audio_aac_config, chunk_size);
+    size_t header_len = pmlxzj_aac_adts_header(buffer, &audio->config, chunk_size);
     assert(header_len == PMLXZJ_AAC_ADTS_HEADER_LEN);
 
     size_t bytes_read = fread(&buffer[header_len], 1, chunk_size, ctx->file);
