@@ -1,4 +1,5 @@
 #include "pmlxzj.h"
+#include "pmlxzj_audio_aac.h"
 #include "pmlxzj_enum_names.h"
 #include "pmlxzj_utils.h"
 
@@ -60,7 +61,7 @@ pmlxzj_state_e pmlxzj_init_audio(pmlxzj_state_t* ctx) {
     }
 
     case PMLXZJ_AUDIO_TYPE_LOSSY_AAC: {
-      fseek(f_src, ctx->audio_metadata_offset + 18 + 4, SEEK_SET);
+      fseek(f_src, ctx->audio_metadata_offset + 0x12 + 4, SEEK_SET);
       pmlxzj_skip_lpe_data(f_src);
       pmlxzj_skip_lpe_data(f_src);
       fread(&ctx->audio_stream_size, sizeof(ctx->audio_stream_size), 1, f_src);
@@ -207,9 +208,32 @@ pmlxzj_state_e pmlxzj_audio_dump_aac(pmlxzj_state_t* ctx, FILE* f_audio) {
     return PMLXZJ_AUDIO_INCORRECT_TYPE;
   }
 
-  FILE* f_src = ctx->file;
+  fseek(ctx->file, ctx->audio_stream_offset, SEEK_SET);
+  size_t len = ctx->audio_stream_size;
+  pmlxzj_aac_audio_config_t config;
+  pmlxzj_state_e state = pmlxzj_aac_parse_decoder_specific_info(&config, (const uint8_t*)"\x15\x08", 2);
+  if (state != PMLXZJ_OK) {
+    return state;
+  }
+  uint8_t adts_header[PMLXZJ_AAC_ADTS_HEADER_LEN] = {0};
+  uint8_t audio_buffer[PMLXZJ_AAC_FRAME_DATA_LEN] = {0};
+  size_t last_read = 0;
+  while(len != 0) {
+    const size_t to_read = PMLXZJ_MIN(PMLXZJ_AAC_FRAME_DATA_LEN, len);
+    size_t bytes_read = fread(audio_buffer, 1, to_read, ctx->file);
+    if (bytes_read == 0) {
+      break;
+    }
+    len -= bytes_read;
 
-  pmlxzj_util_copy(f_audio, ctx->file, ctx->audio_stream_size);
+    // update header if we had a different number of bytes read.
+    if (last_read != bytes_read) {
+      pmlxzj_aac_adts_header(adts_header, &config, (uint16_t)bytes_read);
+      last_read = bytes_read;
+    }
+    fwrite(adts_header, 1, PMLXZJ_AAC_ADTS_HEADER_LEN, f_audio);
+    fwrite(audio_buffer, 1, bytes_read, f_audio);
+  }
 
   return PMLXZJ_OK;
 }

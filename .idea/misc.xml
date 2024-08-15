@@ -8,6 +8,8 @@
     <excludeRoots>
       <file path="$PROJECT_DIR$/cmake-build-debug" />
       <file path="$PROJECT_DIR$/cmake-build-release" />
+      <file path="$PROJECT_DIR$/cmake-build-release-mingw32" />
+      <file path="$PROJECT_DIR$/cmake-build-release-vs" />
       <file path="$PROJECT_DIR$/sample" />
     </excludeRoots>
   </component>
