@@ -1,6 +1,7 @@
 #include "pmlxzj.h"
 #include "pmlxzj_commands.h"
 #include "pmlxzj_utils.h"
+#include "pmlxzj_enum_names.h"
 
 #include <memory.h>
 #include <stddef.h>
@@ -107,9 +108,14 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
   pmlxzj_param.input_file = f_src;
   pmlxzj_param.resume_on_bad_password = cli_params.resume_on_bad_password;
   memcpy(pmlxzj_param.password, cli_params.password, sizeof(pmlxzj_param.password));
-  pmlxzj_state_e status = pmlxzj_init_all(&app, &pmlxzj_param);
+  pmlxzj_state_e status = pmlxzj_init(&app, &pmlxzj_param);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init failed: %d\n", status);
+    printf("ERROR: Init failed (exe): %d (%s)\n", status, pmlxzj_get_state_name(status));
+    return 1;
+  }
+  status = pmlxzj_init_frame(&app);
+  if (status != PMLXZJ_OK) {
+    printf("ERROR: Init failed (frame): %d (%s)\n", status, pmlxzj_get_state_name(status));
     return 1;
   }
 
@@ -127,6 +133,9 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
   } else {
     printf("error: edit_lock_nonce is zero. Unsupported cipher or not encrypted.\n");
   }
+
+  fclose(f_src);
+  fclose(f_dst);
 
   return 0;
 }

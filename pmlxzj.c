@@ -1,4 +1,6 @@
 #include "pmlxzj.h"
+#include "pmlxzj_enum_names.h"
+
 #include <memory.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,14 +117,14 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
   fread(&variant_i32, sizeof(variant_i32), 1, f_src);
   if (variant_i32 <= 0) {
     // New format
-    ctx->audio_data_version = PMLXZJ_AUDIO_VERSION_CURRENT;
-    ctx->audio_start_offset = (long)-variant_i32;
+    ctx->audio_metadata_version = PMLXZJ_AUDIO_VERSION_CURRENT;
+    ctx->audio_metadata_offset = (long)-variant_i32;
     ctx->frame_metadata_offset = (long)ctx->footer.offset_data_start + (long)sizeof(variant_i32);
   } else {
     // Legacy format
-    ctx->audio_data_version = PMLXZJ_AUDIO_VERSION_LEGACY;
+    ctx->audio_metadata_version = PMLXZJ_AUDIO_VERSION_LEGACY;
     ctx->frame_metadata_offset = (long)variant_i32;
-    ctx->audio_start_offset = (long)ctx->footer.offset_data_start + (long)sizeof(variant_i32);
+    ctx->audio_metadata_offset = (long)ctx->footer.offset_data_start + (long)sizeof(variant_i32);
   }
 
   long offset = (long)(ctx->file_size - sizeof(ctx->footer));
@@ -141,17 +143,14 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
 pmlxzj_state_e pmlxzj_init_all(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
   pmlxzj_state_e status = pmlxzj_init(ctx, params);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj exe failed: %d\n", status);
     return status;
   }
   status = pmlxzj_init_audio(ctx);
-  if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj (audio) failed: %d\n", status);
+  if (status != PMLXZJ_OK && status != PMLXZJ_NO_AUDIO) {
     return status;
   }
   status = pmlxzj_init_frame(ctx);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj (frame) failed: %d\n", status);
     return status;
   }
 

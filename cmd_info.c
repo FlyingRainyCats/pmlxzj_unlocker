@@ -1,7 +1,9 @@
 #include <unistd.h>
 
 #include "pmlxzj.h"
+#include "pmlxzj_audio_aac.h"
 #include "pmlxzj_commands.h"
+#include "pmlxzj_enum_names.h"
 
 typedef struct {
   bool verbose;
@@ -65,9 +67,10 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
   params.input_file = f_src;
   pmlxzj_state_e status = pmlxzj_init_all(&app, &params);
   if (status != PMLXZJ_OK) {
-    printf("ERROR: Init pmlxzj failed: %d\n", status);
+    printf("ERROR: Init pmlxzj failed: %d (%s)\n", status, pmlxzj_get_state_name(status));
     return 1;
   }
+  printf("\n");
 
   if (param.print_indexes) {
     printf("idx1(len=%d):\n", (int)app.idx1_count);
@@ -80,27 +83,68 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
     }
   }
 
-  printf("offset_data_start: 0x%x\n", app.footer.offset_data_start);
+  printf("offset: 0x%x\n", app.footer.offset_data_start);
   printf("frame:\n");
   printf("  offset: 0x%lx\n", app.first_frame_offset);
-  printf("  type: %d\n", app.footer.initial_ui_state.image_compress_type);
+  printf("  type: %d\n", app.footer.config.image_compress_type);
 
   printf("audio:\n");
   printf("  offset: ");
-  if (app.audio_start_offset) {
-    printf("0x%08lx\n", app.audio_start_offset);
+  if (app.audio_metadata_offset) {
+    printf("0x%08lx\n", app.audio_metadata_offset);
   } else {
     printf("(none)\n");
   }
-  printf("  codec: %u # %s\n", app.footer.initial_ui_state.audio_codec,
-         pmlxzj_get_audio_codec_name(app.footer.initial_ui_state.audio_codec));
-  if (app.footer.initial_ui_state.audio_codec == PMLXZJ_AUDIO_TYPE_LOSSY_MP3) {
-    printf("    mp3_offset: 0x%08lx\n", app.audio_mp3_start_offset);
-    printf("    mp3_len:    0x%08x\n", app.audio_mp3_total_size);
-    if (param.verbose) {
-      for (uint32_t i = 0; i < app.audio_segment_count; i++) {
-        printf("    mp3_chunk[%04u].len: 0x%08x\n", i, app.audio_mp3_chunk_offsets[i]);
+  printf("  codec: %u  # %s\n", app.footer.config.audio_codec,
+         pmlxzj_get_audio_codec_name(app.footer.config.audio_codec));
+
+  switch (app.footer.config.audio_codec) {
+    case PMLXZJ_AUDIO_TYPE_WAVE_RAW: {
+      pmlxzj_audio_wav_t* audio = &app.audio.wav;
+      printf("    offset: 0x%08lx\n", audio->offset);
+      printf("    size:   0x%08x\n", audio->size);
+      break;
+    }
+
+    case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED: {
+      pmlxzj_audio_wav_zlib_t* audio = &app.audio.wav_zlib;
+      printf("    offset:   0x%08lx\n", audio->offset);
+      printf("    segments: 0x%08x\n", audio->segment_count);
+      break;
+    }
+
+    case PMLXZJ_AUDIO_TYPE_LOSSY_MP3: {
+      pmlxzj_audio_mp3_t* audio = &app.audio.mp3;
+      printf("    offset: 0x%08lx\n", audio->offset);
+      printf("    size:   0x%08x\n", audio->size);
+      if (param.verbose) {
+        printf("    chunks:\n");
+        for (uint32_t i = 0; i < audio->segment_count; i++) {
+          printf("      mp3_chunk[%04u].offset: 0x%08x\n", i, audio->offsets[i]);
+        }
       }
+
+      break;
+    }
+
+    case PMLXZJ_AUDIO_TYPE_LOSSY_AAC: {
+      pmlxzj_audio_aac_t* audio = &app.audio.aac;
+
+      printf("    offset:   0x%08lx\n", audio->offset);
+      printf("    size:     0x%08x\n", audio->size);
+      printf("    segments: 0x%08x\n", audio->segment_count);
+      printf("    format:   ");
+      for (size_t i = 0; i < sizeof(audio->format); i++) {
+        printf("%02x ", audio->format[i]);
+      }
+      printf("\n");
+      printf("      profile:     %2d (%s)\n", audio->config.profile_id,
+             pmlxzj_adts_get_profile_name(audio->config.profile_id));
+      printf("      sample rate: %2d (%d Hz)\n", audio->config.sample_rate_id,
+             pmlxzj_adts_get_sample_rate(audio->config.sample_rate_id));
+      printf("      channel:     %2d\n", audio->config.channels_id);
+
+      break;
     }
   }
 
@@ -120,6 +164,7 @@ int pmlxzj_cmd_print_info(int argc, char** argv) {
   if (param.print_frames) {
     pmlxzj_enumerate_images(&app, enum_frame_print_info, &param);
   }
+  fclose(f_src);
 
   return 0;
 }

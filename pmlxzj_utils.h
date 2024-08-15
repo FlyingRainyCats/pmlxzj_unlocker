@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -26,10 +27,16 @@ static inline void pmlxzj_util_hexdump(void* ptr, int buflen) {
   }
 }
 
+static inline void pmlxzj_skip_lpe_data(FILE* file) {
+  uint32_t len;
+  fread(&len, sizeof(len), 1, file);
+  fseek(file, (long)len, SEEK_CUR);
+}
+
 static inline void pmlxzj_util_copy(FILE* f_dst, FILE* f_src, size_t len) {
   char* buffer = malloc(4096);
   size_t bytes_read;
-  while(len > 0) {
+  while (len > 0) {
     bytes_read = fread(buffer, 1, PMLXZJ_MIN(4096, len), f_src);
     if (bytes_read == 0) {
       break;

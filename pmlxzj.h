@@ -4,28 +4,18 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define PMLXZJ_AUDIO_TYPE_WAVE_RAW (1)
-#define PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED (2)
-#define PMLXZJ_AUDIO_TYPE_LOSSY_MP3 (5)
-#define PMLXZJ_AUDIO_TYPE_TRUE_SPEECH (6)
+typedef enum {
+  PMLXZJ_AUDIO_TYPE_WAVE_RAW = 1,
+  PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED = 2,
+  PMLXZJ_AUDIO_TYPE_LOSSY_MP3 = 5,
+  PMLXZJ_AUDIO_TYPE_LOSSY_TRUE_SPEECH = 6,
+  PMLXZJ_AUDIO_TYPE_LOSSY_AAC = 7,
+} pmlxzj_audio_codec_e;
 
-#define PMLXZJ_AUDIO_VERSION_LEGACY (0)
-#define PMLXZJ_AUDIO_VERSION_CURRENT (1)
-
-static inline const char* pmlxzj_get_audio_codec_name(uint32_t audio_codec) {
-  switch (audio_codec) {
-    case PMLXZJ_AUDIO_TYPE_WAVE_RAW:
-      return "PMLXZJ_AUDIO_TYPE_WAVE_RAW";
-    case PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED:
-      return "PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED";
-    case PMLXZJ_AUDIO_TYPE_LOSSY_MP3:
-      return "PMLXZJ_AUDIO_TYPE_LOSSY_MP3";
-    case PMLXZJ_AUDIO_TYPE_TRUE_SPEECH:
-      return "PMLXZJ_AUDIO_TYPE_TRUE_SPEECH";
-    default:
-      return "UNKNOWN";
-  }
-}
+typedef enum {
+  PMLXZJ_AUDIO_VERSION_LEGACY = 0,
+  PMLXZJ_AUDIO_VERSION_CURRENT = 1,
+} pmlxzj_audio_version;
 
 #pragma pack(push, 1)
 // size = 0xB4
@@ -73,7 +63,7 @@ typedef struct {
 } pmlxzj_initial_ui_state_t;
 
 typedef struct {
-  pmlxzj_initial_ui_state_t initial_ui_state;
+  pmlxzj_initial_ui_state_t config;
   uint32_t edit_lock_nonce;
   uint32_t play_lock_password_checksum;
   uint32_t key_3;
@@ -110,6 +100,40 @@ typedef struct {
 #pragma pack(pop)
 
 typedef struct {
+  uint8_t profile_id;
+  uint8_t sample_rate_id;
+  uint8_t channels_id;
+} pmlxzj_aac_audio_config_t;
+
+typedef struct {
+  long offset;
+  uint32_t size;
+  uint32_t segment_count;
+
+  // decoder specific data
+  uint8_t format[4];
+  uint32_t* segment_sizes;
+  pmlxzj_aac_audio_config_t config;
+} pmlxzj_audio_aac_t;
+
+typedef struct {
+  long offset;
+  uint32_t size;
+} pmlxzj_audio_wav_t;
+
+typedef struct {
+  long offset;
+  uint32_t segment_count;
+} pmlxzj_audio_wav_zlib_t;
+
+typedef struct {
+  long offset;
+  uint32_t size;
+  uint32_t segment_count;
+  uint32_t* offsets;
+} pmlxzj_audio_mp3_t;
+
+typedef struct {
   FILE* file;
 
   long file_size;
@@ -128,15 +152,15 @@ typedef struct {
   long frame;
 
   // Audio metadata
-  int audio_data_version;
-  long audio_start_offset;
-  uint32_t audio_segment_count;
-  uint32_t audio_raw_wave_size;
+  int audio_metadata_version;
+  long audio_metadata_offset;
 
-  // Audio: MP3
-  long audio_mp3_start_offset;
-  uint32_t* audio_mp3_chunk_offsets;
-  uint32_t audio_mp3_total_size;
+  union  {
+    pmlxzj_audio_mp3_t mp3;
+    pmlxzj_audio_wav_t wav;
+    pmlxzj_audio_wav_zlib_t wav_zlib;
+    pmlxzj_audio_aac_t aac;
+  } audio;
 } pmlxzj_state_t;
 
 typedef struct {
@@ -161,7 +185,11 @@ typedef enum {
   PMLXZJ_GZIP_BUFFER_ALLOC_FAILURE = 10,
   PMLXZJ_GZIP_BUFFER_TOO_LARGE = 11,
   PMLXZJ_GZIP_INFLATE_FAILURE = 12,
-  PMLXZJ_AUDIO_EMPTY_CHUNKS = 13,
+  PMLXZJ_NO_AUDIO = 13,
+  PMLXZJ_AUDIO_AAC_DECODER_INFO_TOO_SMALL = 14,
+  PMLXZJ_AUDIO_AAC_DECODER_UNSUPPORTED_SAMPLE_RATE = 15,
+  PMLXZJ_AUDIO_AAC_INVALID_DECODER_SPECIFIC_INFO = 16,
+  PMLXZJ_AUDIO_AAC_INVALID_FRAME_SIZE = 17,
 } pmlxzj_state_e;
 
 typedef enum {
@@ -204,3 +232,4 @@ pmlxzj_state_e pmlxzj_audio_dump_to_file(pmlxzj_state_t* ctx, FILE* f_audio);
 pmlxzj_state_e pmlxzj_audio_dump_raw_wave(pmlxzj_state_t* ctx, FILE* f_audio);
 pmlxzj_state_e pmlxzj_audio_dump_compressed_wave(pmlxzj_state_t* ctx, FILE* f_audio);
 pmlxzj_state_e pmlxzj_audio_dump_mp3(pmlxzj_state_t* ctx, FILE* f_audio);
+pmlxzj_state_e pmlxzj_audio_dump_aac(pmlxzj_state_t* ctx, FILE* f_audio);
