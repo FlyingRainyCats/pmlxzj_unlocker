@@ -39,5 +39,5 @@ static inline void FixWindowsUnicodeSupport(char*** argv) {
 #else
 #define FixWindowsUnicodeSupport(...) \
   do {                                \
-  } while (false)
+  } while (0)
 #endif
