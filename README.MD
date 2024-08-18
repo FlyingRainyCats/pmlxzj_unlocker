@@ -16,7 +16,7 @@ by 爱飞的猫@52pojie.cn - 仅供学习交流用途
 
 支持：
 
-- 音频提取 (仅限 wav)
+- 音频提取 (支持使用 WAV、MP3、AAC 音频格式的 EXE 播放器)
 - 禁用音频[^disable_audio]
 - 解除“编辑加密”锁定
 - 解除“播放加密”锁定 (需要提供正确密码 [^password_note] [^non_ascii_password_note])
@@ -76,6 +76,7 @@ cmake --build build
 - 不压缩 (WAV)
 - 无损压缩 (WAV + zlib 压缩)
 - 有损压缩 (MP3 格式)
+- 有损压缩 (AAC 格式)
 
 尚未支援：
 
