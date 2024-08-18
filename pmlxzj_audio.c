@@ -260,7 +260,7 @@ pmlxzj_state_e pmlxzj_audio_dump_aac(pmlxzj_state_t* ctx, FILE* f_audio) {
 
     fwrite(buffer, 1, header_len + bytes_read, f_audio);
   }
-  assert(ftell(ctx->file) == (long)(ctx->audio_stream_offset + ctx->audio_stream_size));
+  assert(ftell(ctx->file) == (long)(audio->offset + audio->size));
 
   return PMLXZJ_OK;
 }
