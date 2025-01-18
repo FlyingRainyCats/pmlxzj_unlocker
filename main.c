@@ -22,6 +22,7 @@ static struct pmlxzj_commands_t g_pmlxzj_commands[] = {
     {.name = "unlock", .handler = pmlxzj_cmd_unlock_exe},
     {.name = "audio-dump", .handler = pmlxzj_cmd_extract_audio},
     {.name = "audio-disable", .handler = pmlxzj_cmd_disable_audio},
+    {.name = "remove-watermark", .handler = pmlxzj_cmd_remove_watermark},
 };
 
 int main(int argc, char** argv) {

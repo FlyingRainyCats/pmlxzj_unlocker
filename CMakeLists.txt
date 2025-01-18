@@ -26,6 +26,7 @@ add_executable(pmlxzj_unlocker
         cmd_extract_audio.c
         cmd_info.c
         cmd_unlock_exe.c
+        cmd_remove_watermark.c
 )
 target_compile_definitions(pmlxzj_unlocker PRIVATE PROJECT_VERSION="${pmlxzj_unlocker_ver}")
 

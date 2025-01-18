@@ -126,6 +126,7 @@ pmlxzj_state_e pmlxzj_init(pmlxzj_state_t* ctx, pmlxzj_user_params_t* params) {
     ctx->frame_metadata_offset = (long)variant_i32;
     ctx->audio_metadata_offset = (long)ctx->footer.offset_data_start + (long)sizeof(variant_i32);
   }
+  ctx->watermark_offset = ctx->frame_metadata_offset + (long)sizeof(ctx->field_14d8);
 
   long offset = (long)(ctx->file_size - sizeof(ctx->footer));
   pmlxzj_state_e status = scan_file_u32_array(&ctx->idx1, &ctx->idx1_count, f_src, &offset);

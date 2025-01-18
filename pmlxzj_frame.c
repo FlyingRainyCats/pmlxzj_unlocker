@@ -26,8 +26,9 @@ pmlxzj_state_e pmlxzj_init_frame(pmlxzj_state_t* ctx) {
     fprintf(stderr, "WARN: ctx->field_14d8.field_24 == %d. Frame init may fail.\n", ctx->field_14d8.field_24);
   }
 
-  const long seek_unused_data = 20 /* v182 */ + 20 /* str1 */ + 40 /* v181 */ +
-                                4 * 3 /* field_1484/field_1488/field_1490 */ + 20 /* font: "微软雅黑" */
+  fread(&ctx->watermark, sizeof(ctx->watermark), 1, f);
+
+  const long seek_unused_data = 4 * 3 /* field_1484/field_1488/field_1490 */ + 20 /* font: "微软雅黑" */
                                 + 4 /* field_1498 */ + 4 /* off_149C_bitmask */;
 
 #ifndef NDEBUG

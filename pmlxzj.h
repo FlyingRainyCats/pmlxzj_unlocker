@@ -89,6 +89,12 @@ typedef struct {
 } pmlxzj_config_14d8_t;
 
 typedef struct {
+  uint8_t lic_data_1[20];
+  uint8_t lic_data_2[20];
+  uint8_t user_watermark[40];
+} pmlxzj_watermark_t;
+
+typedef struct {
   uint16_t wFormatTag;
   uint16_t nChannels;
   uint32_t nSamplesPerSec;
@@ -147,6 +153,10 @@ typedef struct {
   size_t idx2_count;
 
   pmlxzj_config_14d8_t field_14d8;
+
+  long watermark_offset;
+  pmlxzj_watermark_t watermark;
+
   long frame_metadata_offset;
   long first_frame_offset;
   long frame;
@@ -155,7 +165,7 @@ typedef struct {
   int audio_metadata_version;
   long audio_metadata_offset;
 
-  union  {
+  union {
     pmlxzj_audio_mp3_t mp3;
     pmlxzj_audio_wav_t wav;
     pmlxzj_audio_wav_zlib_t wav_zlib;
