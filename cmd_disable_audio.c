@@ -35,11 +35,6 @@ int pmlxzj_cmd_disable_audio(int argc, char** argv) {
     return 1;
   }
 
-  if (app.audio_metadata_version == PMLXZJ_AUDIO_VERSION_LEGACY) {
-    printf("ERROR: exe player upgrade required.\n");
-    return 1;
-  }
-
   FILE* f_dst = fopen(exe_output_path, "wb");
   if (f_dst == NULL) {
     perror("ERROR: open output");
@@ -47,16 +42,37 @@ int pmlxzj_cmd_disable_audio(int argc, char** argv) {
     return 1;
   }
 
-  pmlxzj_util_copy_file(f_dst, f_src);
+  // Get the size of the input file
+  fseek(f_src, 0, SEEK_END);
+  size_t src_file_size = (size_t)ftell(f_src);
+  fseek(f_src, 0, SEEK_SET);
 
-  uint32_t audio_len = 0;
-  fseek(f_dst, (long)app.footer.offset_data_start, SEEK_SET);
-  fwrite(&audio_len, sizeof(audio_len), 1, f_dst);
+  // Copy until the start of the data section
+  pmlxzj_util_copy(f_dst, f_src, app.footer.offset_data_start);
+
+  uint32_t zero = {0};
+  fwrite(&zero, sizeof(zero), 1, f_dst);
+
+  // Copy metadata
+  if (app.audio_metadata_version == PMLXZJ_AUDIO_VERSION_LEGACY) {
+    // Legacy: audio data followed by metadata and frame data.
+    fseek(f_src, app.frame_metadata_offset, SEEK_SET);
+    int64_t metadata_and_frame_size =
+        (signed)src_file_size - app.frame_metadata_offset - (signed)sizeof(pmlxzj_footer_t);
+    pmlxzj_util_copy(f_dst, f_src, metadata_and_frame_size);
+  } else {
+    // Current: metadata + frame data, followed by audio data, timecodes, and then header.
+    // no easy way to strip audio data, let's just ignore them for now.
+    fseek(f_src, sizeof(uint32_t), SEEK_CUR);
+    int64_t data_size =
+        (signed)src_file_size - app.footer.offset_data_start - (signed)sizeof(pmlxzj_footer_t) - 4;
+    pmlxzj_util_copy(f_dst, f_src, data_size);
+    fseek(f_dst, app.file_size - (long)(sizeof(pmlxzj_footer_t)), SEEK_SET);
+  }
 
   pmlxzj_footer_t footer = {0};
   memcpy(&footer, &app.footer, sizeof(footer));
   footer.config.audio_codec = PMLXZJ_AUDIO_TYPE_WAVE_COMPRESSED;
-  fseek(f_dst, app.file_size - (long)(sizeof(pmlxzj_footer_t)), SEEK_SET);
   fwrite(&footer, sizeof(footer), 1, f_dst);
 
   fclose(f_dst);
