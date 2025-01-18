@@ -2,8 +2,9 @@
 #include "pmlxzj_commands.h"
 #include "pmlxzj_utils.h"
 
-#include <stdio.h>
 #include <memory.h>
+#include <stdio.h>
+#include <string.h>
 
 int pmlxzj_cmd_disable_audio(int argc, char** argv) {
   if (argc <= 2) {
@@ -11,7 +12,14 @@ int pmlxzj_cmd_disable_audio(int argc, char** argv) {
     return 1;
   }
 
-  FILE* f_src = fopen(argv[1], "rb");
+  const char* exe_input_path = argv[1];
+  const char* exe_output_path = argv[2];
+  if (strcmp(exe_input_path, exe_output_path) == 0) {
+    printf("ERROR: input and output file cannot be the same.\n");
+    return 1;
+  }
+
+  FILE* f_src = fopen(exe_input_path, "rb");
   if (f_src == NULL) {
     perror("ERROR: open source input");
     return 1;
@@ -23,6 +31,7 @@ int pmlxzj_cmd_disable_audio(int argc, char** argv) {
   pmlxzj_state_e status = pmlxzj_init(&app, &params);
   if (status != PMLXZJ_OK) {
     printf("ERROR: Init pmlxzj exe failed: %d\n", status);
+    fclose(f_src);
     return 1;
   }
 
@@ -31,10 +40,10 @@ int pmlxzj_cmd_disable_audio(int argc, char** argv) {
     return 1;
   }
 
-  char* audio_output_path = argv[2];
-  FILE* f_dst = fopen(audio_output_path, "wb");
+  FILE* f_dst = fopen(exe_output_path, "wb");
   if (f_dst == NULL) {
     perror("ERROR: open output");
+    fclose(f_src);
     return 1;
   }
 

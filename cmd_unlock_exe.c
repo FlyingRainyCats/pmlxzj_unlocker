@@ -1,7 +1,7 @@
 #include "pmlxzj.h"
 #include "pmlxzj_commands.h"
-#include "pmlxzj_utils.h"
 #include "pmlxzj_enum_names.h"
+#include "pmlxzj_utils.h"
 
 #include <memory.h>
 #include <stddef.h>
@@ -63,8 +63,7 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
         strncpy(cli_params.password, optarg, sizeof(cli_params.password) - 1);
         break;
 
-      case 'P':
-      {
+      case 'P': {
         FILE* f_password = fopen(optarg, "rb");
         if (f_password == NULL) {
           perror("read password file");
@@ -88,13 +87,20 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
     return 1;
   }
 
-  FILE* f_src = fopen(argv[optind], "rb");
+  const char* exe_input_path = argv[optind];
+  const char* exe_output_path = argv[optind + 1];
+  if (strcmp(exe_input_path, exe_output_path) == 0) {
+    printf("ERROR: input and output file cannot be the same.\n");
+    return 1;
+  }
+
+  FILE* f_src = fopen(exe_input_path, "rb");
   if (f_src == NULL) {
     perror("ERROR: open source input");
     return 1;
   }
 
-  FILE* f_dst = fopen(argv[optind + 1], "wb");
+  FILE* f_dst = fopen(exe_output_path, "wb");
   if (f_dst == NULL) {
     perror("ERROR: open dest input");
     fclose(f_src);
@@ -111,11 +117,15 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
   pmlxzj_state_e status = pmlxzj_init(&app, &pmlxzj_param);
   if (status != PMLXZJ_OK) {
     printf("ERROR: Init failed (exe): %d (%s)\n", status, pmlxzj_get_state_name(status));
+    fclose(f_dst);
+    fclose(f_src);
     return 1;
   }
   status = pmlxzj_init_frame(&app);
   if (status != PMLXZJ_OK) {
     printf("ERROR: Init failed (frame): %d (%s)\n", status, pmlxzj_get_state_name(status));
+    fclose(f_dst);
+    fclose(f_src);
     return 1;
   }
 
@@ -134,8 +144,8 @@ int pmlxzj_cmd_unlock_exe(int argc, char** argv) {
     printf("error: edit_lock_nonce is zero. Unsupported cipher or not encrypted.\n");
   }
 
-  fclose(f_src);
   fclose(f_dst);
+  fclose(f_src);
 
   return 0;
 }
